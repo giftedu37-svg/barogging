@@ -5,6 +5,13 @@ import { useEffect, useRef, useState } from "react";
 type Tab = "plogging" | "records" | "map" | "rewards";
 type Mode = "solo" | "group";
 type RankMetric = "distance" | "time";
+type ActivityRecord = {
+  id: number;
+  distance: number;
+  elapsedSeconds: number;
+  steps: number;
+  createdAt: string;
+};
 type GroupData = {
   id: number;
   name: string;
@@ -112,13 +119,18 @@ function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
   );
 }
 
-function RecordsScreen({ nickname }: { nickname: string }) {
+function RecordsScreen({ nickname, activityRecords }: { nickname: string; activityRecords: ActivityRecord[] }) {
   const [ranking, setRanking] = useState<Mode>("group");
   const [metric, setMetric] = useState<RankMetric>("distance");
   const [routes, setRoutes] = useState(communityRoutes);
   const [courseOpen, setCourseOpen] = useState(false);
   const [detailRoute, setDetailRoute] = useState<(typeof communityRoutes)[number] | null>(null);
   const ranks = ranking === "group" ? groupRank : soloRank;
+  const addedDistance = activityRecords.reduce((sum, record) => sum + record.distance, 0);
+  const addedSeconds = activityRecords.reduce((sum, record) => sum + record.elapsedSeconds, 0);
+  const addedSteps = activityRecords.reduce((sum, record) => sum + record.steps, 0);
+  const totalSeconds = 8 * 3600 + 42 * 60 + addedSeconds;
+  const totalTime = `${String(Math.floor(totalSeconds / 3600)).padStart(2, "0")}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0")}`;
   return (
     <main className="screen">
       <section className="page-title">
@@ -127,10 +139,18 @@ function RecordsScreen({ nickname }: { nickname: string }) {
       </section>
 
       <div className="stat-grid">
-        <div><span>이번 달</span><strong>28.4 <small>km</small></strong><em>↑ 12%</em></div>
-        <div><span>누적 시간</span><strong>08:42</strong><small>시간 : 분</small></div>
-        <div><span>걸음 수</span><strong>42,680</strong><small>걸음</small></div>
+        <div><span>이번 달</span><strong>{(28.4 + addedDistance).toFixed(2)} <small>km</small></strong><em>↑ 12%</em></div>
+        <div><span>누적 시간</span><strong>{totalTime}</strong><small>시간 : 분</small></div>
+        <div><span>걸음 수</span><strong>{(42680 + addedSteps).toLocaleString()}</strong><small>걸음</small></div>
       </div>
+
+      {activityRecords.length > 0 && (
+        <section className="latest-session-card">
+          <span>방금 저장된 기록</span>
+          <strong>{activityRecords[0].distance.toFixed(2)}km · {Math.floor(activityRecords[0].elapsedSeconds / 60)}분 {activityRecords[0].elapsedSeconds % 60}초</strong>
+          <small>{activityRecords[0].steps.toLocaleString()}걸음 · {activityRecords[0].createdAt}</small>
+        </section>
+      )}
 
       <section className="section-block">
         <div className="section-head">
@@ -259,15 +279,16 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
 
 function RewardsScreen({
   points,
+  claimedDays,
   onRedeem,
   onAttendance,
 }: {
   points: number;
+  claimedDays: number[];
   onRedeem: (name: string, price: number) => void;
   onAttendance: (day: number) => void;
 }) {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const today = 28;
   const rewards = [
     { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 3000 },
@@ -300,10 +321,7 @@ function RewardsScreen({
               key={day}
               className={`${claimedDays.includes(day) ? "checked" : ""} ${day === today ? "today" : ""}`}
               disabled={day > today || claimedDays.includes(day)}
-              onClick={() => {
-                setClaimedDays((current) => [...current, day]);
-                onAttendance(day);
-              }}
+              onClick={() => onAttendance(day)}
             >
               {claimedDays.includes(day) ? "✓" : day}
             </button>
@@ -339,6 +357,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const awardedRef = useRef(false);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -383,6 +402,12 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
     return () => timers.forEach(clearTimeout);
   }, [step]);
 
+  useEffect(() => {
+    if (step !== 3 || awardedRef.current) return;
+    awardedRef.current = true;
+    onComplete(34);
+  }, [step, onComplete]);
+
   useEffect(() => () => stopCamera(), []);
 
   return (
@@ -415,7 +440,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
             <span className="success-ring">✓</span>
             <p className="eyebrow">인증 완료</p>
             <h2>사진 인증 완료!</h2>
-            <p>센서 확인까지 끝났어요. 오늘 플로깅 기록에 따라 포인트가 지급됩니다.</p>
+            <p>센서 확인까지 끝나 <b>34P가 바로 지급됐어요.</b></p>
             <div className="scan-steps complete-steps">
               {["카메라 배출", "사진 확인", "센서 인증", "포인트 지급"].map((label) => <span key={label} className="active"><i>✓</i>{label}</span>)}
             </div>
@@ -425,7 +450,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
               <div><span>획득 포인트</span><strong>+34 P</strong></div>
             </div>
             <small className="point-rule-note">1km당 10P 기준으로 계산됐어요.</small>
-            <button className="primary-button" onClick={() => onComplete(34)}>34P 지급받기</button>
+            <button className="primary-button" onClick={closeCamera}>포인트 지급 확인</button>
           </div>
         )}
       </div>
@@ -433,9 +458,15 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   );
 }
 
-function ProfileModal({ points, nickname, onClose, onLogout }: { points: number; nickname: string; onClose: () => void; onLogout: () => void }) {
+function ProfileModal({ points, nickname, activityRecords, onClose, onLogout }: { points: number; nickname: string; activityRecords: ActivityRecord[]; onClose: () => void; onLogout: () => void }) {
   const [showAll, setShowAll] = useState(false);
+  const recordedActivities = activityRecords.map((record) => ({
+    distance: `${record.distance.toFixed(2)}km`,
+    title: "새로 저장한 바로깅",
+    detail: `${record.createdAt} · ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초 · ${record.steps.toLocaleString()}걸음`,
+  }));
   const activities = [
+    ...recordedActivities,
     { distance: "5.4km", title: "해운대 해변 바로깅", detail: "7월 28일 · 48분 · +54P" },
     { distance: "3.2km", title: "동백섬 한 바퀴", detail: "7월 27일 · 36분 · +32P" },
     { distance: "4.8km", title: "광안리 야간 바로깅", detail: "7월 25일 · 52분 · +48P" },
@@ -576,6 +607,7 @@ function ActivityModal({
   onToggleJoin,
   onCreateGroup,
   onDeleteGroup,
+  onCompleteActivity,
 }: {
   mode: Mode;
   onClose: () => void;
@@ -583,6 +615,7 @@ function ActivityModal({
   onToggleJoin: (id: number) => void;
   onCreateGroup: (group: Omit<GroupData, "id" | "joined" | "owned">) => void;
   onDeleteGroup: (id: number) => void;
+  onCompleteActivity: (record: ActivityRecord) => void;
 }) {
   const [groupName, setGroupName] = useState("");
   const [groupPlace, setGroupPlace] = useState("");
@@ -597,7 +630,7 @@ function ActivityModal({
     return () => window.clearInterval(timer);
   }, [recording]);
 
-  const measuredDistance = (elapsed * 0.0032).toFixed(2);
+  const measuredDistance = elapsed * 0.0032;
   const measuredSteps = elapsed * 2;
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
 
@@ -673,8 +706,8 @@ function ActivityModal({
         <h2>혼자 플로깅</h2>
         <p>현재 위치에서 바로 기록을 시작할까요?</p>
         {recording && <span className="recording-live"><i></i>측정 중</span>}
-        <div className={`live-preview ${recording ? "is-recording" : ""}`}><span><i>거리</i><b>{measuredDistance} km</b></span><span><i>시간</i><b>{measuredTime}</b></span><span><i>걸음</i><b>{measuredSteps.toLocaleString()}</b></span></div>
-        <p className="distance-rule">달린 거리 × 10P · 1km부터 적립</p>
+        <div className={`live-preview ${recording ? "is-recording" : ""}`}><span><i>거리</i><b>0.00 km</b></span><span><i>시간</i><b>{measuredTime}</b></span><span><i>걸음</i><b>0</b></span></div>
+        <p className="distance-rule">{recording ? "거리와 걸음 수는 종료 후 기록에 반영돼요." : "달린 거리 × 10P · 1km부터 적립"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
@@ -682,7 +715,13 @@ function ActivityModal({
               setRecording(true);
             } else {
               setRecording(false);
-              alert(`측정 종료! ${measuredDistance}km · ${measuredTime} 기록을 저장했어요.`);
+              onCompleteActivity({
+                id: Date.now(),
+                distance: measuredDistance,
+                elapsedSeconds: elapsed,
+                steps: measuredSteps,
+                createdAt: "오늘",
+              });
               onClose();
             }
           }}
@@ -742,10 +781,40 @@ export default function Home() {
   const [activityMode, setActivityMode] = useState<Mode | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [groups, setGroups] = useState<GroupData[]>(initialGroups);
+  const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>([]);
+  const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  const [attendanceReady, setAttendanceReady] = useState(false);
+  const [notice, setNotice] = useState("");
+  const noticeTimerRef = useRef<number | null>(null);
+
+  const showNotice = (message: string) => {
+    setNotice(message);
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setNotice(""), 2600);
+  };
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("barogging-attendance-2026-07");
+      if (saved) setClaimedDays(JSON.parse(saved));
+    } catch {
+      // 기기 저장소를 사용할 수 없어도 현재 화면에서는 한 번만 지급합니다.
+    }
+    setAttendanceReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!attendanceReady) return;
+    try {
+      window.localStorage.setItem("barogging-attendance-2026-07", JSON.stringify(claimedDays));
+    } catch {
+      // 저장소가 차단된 환경에서는 현재 접속 중인 출석 상태를 유지합니다.
+    }
+  }, [attendanceReady, claimedDays]);
 
   const completeScan = (earnedPoints: number) => {
     setPoints((current) => current + earnedPoints);
-    setCameraOpen(false);
+    showNotice(`사진 인증 완료 · ${earnedPoints}P 지급 완료`);
   };
 
   const toggleJoin = (id: number) => {
@@ -785,22 +854,28 @@ export default function Home() {
         <Header points={points} onAccount={() => setProfileOpen(true)} />
         <div className="content">
           {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
-          {tab === "records" && <RecordsScreen nickname={nickname} />}
+          {tab === "records" && <RecordsScreen nickname={nickname} activityRecords={activityRecords} />}
           {tab === "map" && <MapScreen onCamera={() => setCameraOpen(true)} />}
           {tab === "rewards" && (
             <RewardsScreen
               points={points}
+              claimedDays={claimedDays}
               onRedeem={(name, price) => {
                 if (points < price) {
-                  alert("포인트가 부족해요.");
+                  showNotice("포인트가 부족해요.");
                   return;
                 }
                 setPoints((current) => current - price);
-                alert(`교환 완료! ${name}으로 ${price.toLocaleString()}P를 사용했어요.`);
+                showNotice(`교환 완료 · ${name}에 ${price.toLocaleString()}P를 사용했어요.`);
               }}
               onAttendance={(day) => {
+                if (claimedDays.includes(day)) {
+                  showNotice("이 날짜의 출석 보상은 이미 받았어요.");
+                  return;
+                }
+                setClaimedDays((current) => [...current, day]);
                 setPoints((current) => current + 1);
-                alert(`7월 ${day}일 출석 완료! 1P가 지급됐어요.`);
+                showNotice(`7월 ${day}일 출석 완료 · 오늘의 1P가 지급됐어요.`);
               }}
             />
           )}
@@ -817,6 +892,7 @@ export default function Home() {
           <ProfileModal
             points={points}
             nickname={nickname}
+            activityRecords={activityRecords}
             onClose={() => setProfileOpen(false)}
             onLogout={() => {
               setProfileOpen(false);
@@ -832,8 +908,13 @@ export default function Home() {
             onToggleJoin={toggleJoin}
             onCreateGroup={createGroup}
             onDeleteGroup={deleteGroup}
+            onCompleteActivity={(record) => {
+              setActivityRecords((current) => [record, ...current]);
+              showNotice(`측정 완료 · ${record.distance.toFixed(2)}km와 ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초를 기록했어요.`);
+            }}
           />
         )}
+        {notice && <div className="app-notice" role="status">{notice}</div>}
       </div>
     </div>
   );

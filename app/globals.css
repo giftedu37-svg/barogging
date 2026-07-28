@@ -122,6 +122,11 @@ button { color: inherit; }
 .stat-grid strong small { font-size: 8px; }
 .stat-grid > div > small { font-size: 7px; color: #8a9794; }
 .stat-grid em { position: absolute; right: 7px; top: 8px; font-size: 7px; font-style: normal; color: #3e9b6c; background: white; border-radius: 20px; padding: 2px 4px; }
+.latest-session-card { margin-top: 9px; padding: 11px 13px; border: 1px solid #cfe3d8; border-radius: 13px; background: #f4faf6; }
+.latest-session-card span, .latest-session-card strong, .latest-session-card small { display: block; }
+.latest-session-card span { color: #438268; font-size: 7px; font-weight: 900; }
+.latest-session-card strong { margin-top: 5px; color: #173e3b; font-size: 11px; }
+.latest-session-card small { margin-top: 3px; color: #7c8b87; font-size: 7px; }
 .section-block { margin-top: 22px; }
 .section-head { display: flex; align-items: center; justify-content: space-between; }
 .section-head h2 { margin: 0; font-size: 15px; letter-spacing: -.045em; }
@@ -288,6 +293,8 @@ button { color: inherit; }
 .bottom-nav small { font-size: 8px; font-weight: 700; }
 .bottom-nav button.active { color: var(--deep); }
 .bottom-nav button.active::before { content: ""; position: absolute; top: -5px; width: 22px; height: 3px; background: var(--coral); border-radius: 3px; }
+.app-notice { position: absolute; z-index: 80; left: 18px; right: 18px; bottom: 79px; padding: 11px 13px; border-radius: 13px; background: #173e3b; color: white; box-shadow: 0 8px 24px rgba(17,47,44,.25); text-align: center; font-size: 9px; font-weight: 800; animation: noticeIn .24s ease; }
+@keyframes noticeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 .modal-backdrop { position: absolute; inset: 0; z-index: 50; background: rgba(12,39,37,.62); backdrop-filter: blur(4px); display: flex; align-items: flex-end; }
 .scan-modal, .activity-modal, .account-modal { width: 100%; min-height: 440px; background: var(--paper); border-radius: 26px 26px 0 0; padding: 24px 22px 26px; text-align: center; position: relative; animation: slideUp .35s ease; }
