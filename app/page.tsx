@@ -291,10 +291,10 @@ function RewardsScreen({
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const today = 28;
   const rewards = [
-    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 1800, items: [{ name: "아메리카노", detail: "부산 제휴 카페", price: 1800 }, { name: "카페라떼", detail: "우유 또는 두유 선택", price: 2400 }, { name: "청포도 에이드", detail: "시원한 과일 음료", price: 2800 }] },
-    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: 1200, items: [{ name: "대나무 칫솔", detail: "플라스틱 절감 생활용품", price: 1200 }, { name: "다회용 빨대 세트", detail: "세척솔 포함", price: 1600 }, { name: "재생 원단 장바구니", detail: "부산 바다 컬러", price: 2800 }] },
-    { icon: "▰", className: "transit", name: "대중교통 충전권", price: 1000, items: [{ name: "교통카드 1천원권", detail: "모바일 교통카드 충전", price: 1000 }, { name: "교통카드 3천원권", detail: "모바일 교통카드 충전", price: 3000 }, { name: "교통카드 5천원권", detail: "모바일 교통카드 충전", price: 5000 }] },
-    { icon: "◇", className: "store", name: "편의점 상품권", price: 900, items: [{ name: "생수 500ml", detail: "제휴 편의점 교환", price: 900 }, { name: "건강 간식", detail: "견과류 또는 에너지바", price: 1600 }, { name: "한 끼 도시락", detail: "제휴 도시락 1개", price: 4200 }] },
+    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 2000, items: [{ name: "카페 음료 5천원권", detail: "제휴 카페 5,000원 이용권", price: 2000 }, { name: "카페 음료 1만원권", detail: "제휴 카페 10,000원 이용권", price: 4000 }, { name: "카페 음료 3만원권", detail: "제휴 카페 30,000원 이용권", price: 6000 }] },
+    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: 2000, items: [{ name: "친환경 마켓 5천원권", detail: "친환경 상품 5,000원 이용권", price: 2000 }, { name: "친환경 마켓 1만원권", detail: "친환경 상품 10,000원 이용권", price: 4000 }, { name: "친환경 마켓 3만원권", detail: "친환경 상품 30,000원 이용권", price: 6000 }] },
+    { icon: "▰", className: "transit", name: "대중교통 충전권", price: 2000, items: [{ name: "교통카드 5천원권", detail: "모바일 교통카드 5,000원 충전", price: 2000 }, { name: "교통카드 1만원권", detail: "모바일 교통카드 10,000원 충전", price: 4000 }, { name: "교통카드 3만원권", detail: "모바일 교통카드 30,000원 충전", price: 6000 }] },
+    { icon: "◇", className: "store", name: "편의점 상품권", price: 2000, items: [{ name: "편의점 5천원권", detail: "제휴 편의점 5,000원 이용권", price: 2000 }, { name: "편의점 1만원권", detail: "제휴 편의점 10,000원 이용권", price: 4000 }, { name: "편의점 3만원권", detail: "제휴 편의점 30,000원 이용권", price: 6000 }] },
     { icon: "♥", className: "donate", name: "해양 보호 기부", price: 1000, items: [{ name: "산호 복원 응원", detail: "산호 서식지 보호", price: 1000 }, { name: "바다거북 구조 지원", detail: "치료와 방류 지원", price: 3000 }, { name: "부산 해변 정화 후원", detail: "정화 장비 구입 지원", price: 5000 }] },
     { icon: "⌂", className: "local", name: "지역사랑 상품권", price: 2500, items: [{ name: "부산어묵 교환권", detail: "지역 제휴 매장", price: 2500 }, { name: "씨앗호떡 세트", detail: "부산 전통시장 교환", price: 3200 }, { name: "로컬 카페 이용권", detail: "부산 동네 카페", price: 4500 }] },
   ];
