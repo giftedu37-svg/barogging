@@ -285,19 +285,20 @@ function RewardsScreen({
 }: {
   points: number;
   claimedDays: number[];
-  onRedeem: (name: string, price: number) => void;
+  onRedeem: (name: string, price: number) => boolean;
   onAttendance: (day: number) => void;
 }) {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const today = 28;
   const rewards = [
-    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 3000 },
-    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: 5000 },
-    { icon: "▰", className: "transit", name: "대중교통 충전권", price: 2000 },
-    { icon: "◇", className: "store", name: "편의점 상품권", price: 4000 },
-    { icon: "♥", className: "donate", name: "해양 보호 기부", price: 1000 },
-    { icon: "⌂", className: "local", name: "지역사랑 상품권", price: 6000 },
+    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 1800, items: [{ name: "아메리카노", detail: "부산 제휴 카페", price: 1800 }, { name: "카페라떼", detail: "우유 또는 두유 선택", price: 2400 }, { name: "청포도 에이드", detail: "시원한 과일 음료", price: 2800 }] },
+    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: 1200, items: [{ name: "대나무 칫솔", detail: "플라스틱 절감 생활용품", price: 1200 }, { name: "다회용 빨대 세트", detail: "세척솔 포함", price: 1600 }, { name: "재생 원단 장바구니", detail: "부산 바다 컬러", price: 2800 }] },
+    { icon: "▰", className: "transit", name: "대중교통 충전권", price: 1000, items: [{ name: "교통카드 1천원권", detail: "모바일 교통카드 충전", price: 1000 }, { name: "교통카드 3천원권", detail: "모바일 교통카드 충전", price: 3000 }, { name: "교통카드 5천원권", detail: "모바일 교통카드 충전", price: 5000 }] },
+    { icon: "◇", className: "store", name: "편의점 상품권", price: 900, items: [{ name: "생수 500ml", detail: "제휴 편의점 교환", price: 900 }, { name: "건강 간식", detail: "견과류 또는 에너지바", price: 1600 }, { name: "한 끼 도시락", detail: "제휴 도시락 1개", price: 4200 }] },
+    { icon: "♥", className: "donate", name: "해양 보호 기부", price: 1000, items: [{ name: "산호 복원 응원", detail: "산호 서식지 보호", price: 1000 }, { name: "바다거북 구조 지원", detail: "치료와 방류 지원", price: 3000 }, { name: "부산 해변 정화 후원", detail: "정화 장비 구입 지원", price: 5000 }] },
+    { icon: "⌂", className: "local", name: "지역사랑 상품권", price: 2500, items: [{ name: "부산어묵 교환권", detail: "지역 제휴 매장", price: 2500 }, { name: "씨앗호떡 세트", detail: "부산 전통시장 교환", price: 3200 }, { name: "로컬 카페 이용권", detail: "부산 동네 카페", price: 4500 }] },
   ];
+  const [selectedReward, setSelectedReward] = useState<(typeof rewards)[number] | null>(null);
   return (
     <main className="screen rewards-screen">
       <section className="reward-hero">
@@ -337,7 +338,7 @@ function RewardsScreen({
             <article key={reward.name}>
               <span className={`coupon-icon ${reward.className}`}>{reward.icon}</span>
               <p>{reward.name}</p><strong>{reward.price.toLocaleString()} P</strong>
-              <button onClick={() => onRedeem(reward.name, reward.price)}>교환하기</button>
+              <button onClick={() => setSelectedReward(reward)}>교환하기</button>
             </article>
           ))}
         </div>
@@ -347,6 +348,26 @@ function RewardsScreen({
         <div><span className="history-icon">⌁</span><p><strong>플로깅 3.2km 완료</strong><small>어제 · 동백섬 코스</small></p><b>+32 P</b></div>
         <div><span className="history-icon">♨</span><p><strong>7월 12일 출석 완료</strong><small>7월 12일 · 매일 출석</small></p><b>+1 P</b></div>
       </section>
+      {selectedReward && (
+        <div className="modal-backdrop">
+          <div className="exchange-modal">
+            <button className="modal-close" onClick={() => setSelectedReward(null)}>×</button>
+            <span className={`coupon-icon ${selectedReward.className}`}>{selectedReward.icon}</span>
+            <p className="eyebrow">SELECT REWARD</p>
+            <h2>{selectedReward.name}</h2>
+            <p>원하는 상품을 골라 포인트로 교환해 보세요.</p>
+            <div className="exchange-item-list">
+              {selectedReward.items.map((item) => (
+                <article key={item.name}>
+                  <div><strong>{item.name}</strong><small>{item.detail}</small></div>
+                  <b>{item.price.toLocaleString()}P</b>
+                  <button onClick={() => { if (onRedeem(item.name, item.price)) setSelectedReward(null); }}>선택</button>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -395,15 +416,12 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
 
   useEffect(() => {
     if (step !== 1) return;
-    const timers = [
-      setTimeout(() => setStep(2), 900),
-      setTimeout(() => setStep(3), 2100),
-    ];
-    return () => timers.forEach(clearTimeout);
+    const timer = window.setTimeout(() => setStep(2), 700);
+    return () => window.clearTimeout(timer);
   }, [step]);
 
   useEffect(() => {
-    if (step !== 3 || awardedRef.current) return;
+    if (step !== 2 || awardedRef.current) return;
     awardedRef.current = true;
     onComplete(34);
   }, [step, onComplete]);
@@ -413,7 +431,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   return (
     <div className="modal-backdrop">
       <div className="scan-modal">
-        {step < 3 ? (
+        {step < 2 ? (
           <>
             <button className="modal-close" onClick={closeCamera}>×</button>
             <div className={`camera-view ${cameraOn ? "live" : ""} ${step > 0 ? "captured" : ""}`}>
@@ -423,8 +441,8 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
               {cameraOn && <i className="focus-frame"></i>}
             </div>
             <p className="eyebrow">SMART BIN #H12</p>
-            <h2>{step === 0 ? "카메라로 배출을 인증해요" : step === 1 ? "배출 사진을 확인하고 있어요" : "투입 센서를 확인 중이에요"}</h2>
-            <p>{step === 0 ? "쓰레기를 수거함에 넣는 모습이 잘 보이게 촬영해 주세요." : step === 1 ? "올바른 배출 모습이 선명하게 촬영됐어요." : "수거함 센서가 쓰레기 투입을 확인했어요."}</p>
+            <h2>{step === 0 ? "카메라로 배출을 인증해요" : "배출 사진을 확인하고 있어요"}</h2>
+            <p>{step === 0 ? "쓰레기를 수거함에 넣는 모습이 잘 보이게 촬영해 주세요." : "촬영한 사진이 확인되면 포인트가 바로 지급돼요."}</p>
             {cameraError && <p className="camera-error">{cameraError}</p>}
             {step === 0 && (
               <button className="camera-button" onClick={cameraOn ? captureWaste : startCamera}>
@@ -432,7 +450,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
               </button>
             )}
             <div className="scan-steps">
-              {["카메라 배출", "사진 확인", "센서 인증", "포인트 지급"].map((label, i) => <span key={label} className={step >= i ? "active" : ""}><i>{step > i ? "✓" : i + 1}</i>{label}</span>)}
+              {["사진 촬영", "사진 확인", "포인트 지급"].map((label, i) => <span key={label} className={step >= i ? "active" : ""}><i>{step > i ? "✓" : i + 1}</i>{label}</span>)}
             </div>
           </>
         ) : (
@@ -440,9 +458,9 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
             <span className="success-ring">✓</span>
             <p className="eyebrow">인증 완료</p>
             <h2>사진 인증 완료!</h2>
-            <p>센서 확인까지 끝나 <b>34P가 바로 지급됐어요.</b></p>
+            <p>배출 사진 인증이 끝나 <b>34P가 바로 지급됐어요.</b></p>
             <div className="scan-steps complete-steps">
-              {["카메라 배출", "사진 확인", "센서 인증", "포인트 지급"].map((label) => <span key={label} className="active"><i>✓</i>{label}</span>)}
+              {["사진 촬영", "사진 확인", "포인트 지급"].map((label) => <span key={label} className="active"><i>✓</i>{label}</span>)}
             </div>
             <div className="verification-summary">
               <div><span>오늘 걸은 거리</span><strong>3.4 km</strong></div>
@@ -591,7 +609,7 @@ function CourseDetailModal({ route, onClose }: { route: (typeof communityRoutes)
           <ol>
             <li><i>1</i><div><strong>{route.area.split(" · ")[1]} 시작 지점</strong><small>해변 입구에서 플로깅을 시작해요.</small></div></li>
             <li><i>2</i><div><strong>해안 산책로 구간</strong><small>안전한 보행로를 따라 쓰레기를 수거해요.</small></div></li>
-            <li><i>3</i><div><strong>스마트 수거함 도착</strong><small>카메라와 센서로 배출을 인증해요.</small></div></li>
+            <li><i>3</i><div><strong>스마트 수거함 도착</strong><small>카메라로 배출 사진을 인증해요.</small></div></li>
           </ol>
         </section>
         <button className="primary-button" onClick={() => { alert(`${route.title} 코스를 내 플로깅에 저장했어요!`); onClose(); }}>이 코스로 시작하기</button>
@@ -863,10 +881,11 @@ export default function Home() {
               onRedeem={(name, price) => {
                 if (points < price) {
                   showNotice("포인트가 부족해요.");
-                  return;
+                  return false;
                 }
                 setPoints((current) => current - price);
                 showNotice(`교환 완료 · ${name}에 ${price.toLocaleString()}P를 사용했어요.`);
+                return true;
               }}
               onAttendance={(day) => {
                 if (claimedDays.includes(day)) {
@@ -910,7 +929,7 @@ export default function Home() {
             onDeleteGroup={deleteGroup}
             onCompleteActivity={(record) => {
               setActivityRecords((current) => [record, ...current]);
-              showNotice(`측정 완료 · ${record.distance.toFixed(2)}km와 ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초를 기록했어요.`);
+              showNotice(`측정 완료 · ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초가 늘었어요.`);
             }}
           />
         )}

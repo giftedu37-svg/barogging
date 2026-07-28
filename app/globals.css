@@ -279,6 +279,17 @@ button { color: inherit; }
 .coupon-icon.donate { background: #f8dce5; color: #c45778; }.coupon-icon.local { background: #e5ddf5; color: #7960ad; }
 .coupon-row p { margin: 8px 0 3px; font-size: 9px; font-weight: 700; }.coupon-row strong { display: block; font-size: 11px; }
 .coupon-row button { width: 100%; margin-top: 8px; border: 1px solid #d8ddd5; background: white; padding: 5px; border-radius: 8px; font-size: 8px; cursor: pointer; }
+.exchange-modal { width: 100%; max-height: 86%; overflow-y: auto; padding: 27px 21px 25px; border-radius: 26px 26px 0 0; background: var(--paper); position: relative; animation: slideUp .35s ease; }
+.exchange-modal > .coupon-icon { width: 40px; height: 40px; margin-bottom: 10px; font-size: 20px; }
+.exchange-modal > h2 { margin: 4px 0 5px; color: #173e3b; font-size: 20px; letter-spacing: -.05em; }
+.exchange-modal > p:not(.eyebrow) { margin: 0 0 15px; color: #7a8986; font-size: 9px; }
+.exchange-item-list { display: grid; gap: 8px; }
+.exchange-item-list article { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 12px; border: 1px solid #dfe5dd; border-radius: 13px; background: white; }
+.exchange-item-list strong, .exchange-item-list small { display: block; }
+.exchange-item-list strong { color: #274f47; font-size: 10px; }
+.exchange-item-list small { margin-top: 3px; color: #899592; font-size: 7px; }
+.exchange-item-list b { color: #3d8968; font-size: 10px; white-space: nowrap; }
+.exchange-item-list button { border: 0; border-radius: 8px; padding: 7px 9px; background: #173e3b; color: white; font-size: 8px; font-weight: 800; cursor: pointer; }
 .point-history { margin: 18px 18px 0; border-top: 1px solid var(--line); }
 .point-history > div { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .history-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: #e6f1e8; color: var(--green); }
