@@ -56,7 +56,7 @@ function Header({ points, onAccount }: { points: number; onAccount: () => void }
       <button className="point-pill" aria-label="내 포인트">
         {points.toLocaleString()} P
       </button>
-      <button className="account-button" onClick={onAccount}>내 계정</button>
+      <button className="account-button" onClick={onAccount}>프로필</button>
     </header>
   );
 }
@@ -320,7 +320,7 @@ function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => v
   );
 }
 
-function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
+function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete: (earnedPoints: number) => void }) {
   const [step, setStep] = useState(0);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState("");
@@ -402,9 +402,14 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
             <span className="success-ring">✓</span>
             <p className="eyebrow">인증 완료</p>
             <h2>올바른 배출이 확인됐어요!</h2>
-            <p>카메라와 투입 센서로 인증했어요. 포인트는 플로깅 거리만큼 적립됩니다.</p>
-            <strong className="sensor-complete">센서 인증 완료</strong>
-            <button className="primary-button" onClick={onComplete}>확인</button>
+            <p>카메라와 투입 센서 인증을 완료해 이번 플로깅 기록을 정리했어요.</p>
+            <div className="verification-summary">
+              <div><span>걸은 거리</span><strong>3.4 km</strong></div>
+              <div><span>활동 시간</span><strong>42분 18초</strong></div>
+              <div><span>획득 포인트</span><strong>+34 P</strong></div>
+            </div>
+            <small className="point-rule-note">1km당 10P 기준으로 계산됐어요.</small>
+            <button className="primary-button" onClick={() => onComplete(34)}>34P 적립하고 완료</button>
           </div>
         )}
       </div>
@@ -412,11 +417,24 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   );
 }
 
-function AccountModal({ points, onClose }: { points: number; onClose: () => void }) {
+function ProfileModal({ points, onClose }: { points: number; onClose: () => void }) {
+  const [showAll, setShowAll] = useState(false);
+  const activities = [
+    { distance: "5.4km", title: "해운대 해변 바로깅", detail: "7월 28일 · 48분 · +54P" },
+    { distance: "3.2km", title: "동백섬 한 바퀴", detail: "7월 27일 · 36분 · +32P" },
+    { distance: "4.8km", title: "광안리 야간 바로깅", detail: "7월 25일 · 52분 · +48P" },
+    { distance: "6.1km", title: "송정 파도 따라 걷기", detail: "7월 22일 · 1시간 8분 · +61P" },
+    { distance: "2.9km", title: "미포 산책로 클린런", detail: "7월 20일 · 31분 · +29P" },
+    { distance: "7.3km", title: "이기대 해안길", detail: "7월 17일 · 1시간 42분 · +73P" },
+    { distance: "4.1km", title: "다대포 노을 코스", detail: "7월 14일 · 49분 · +41P" },
+  ];
+  const visibleActivities = showAll ? activities : activities.slice(0, 3);
+
   return (
     <div className="modal-backdrop">
       <div className="account-modal">
         <button className="modal-close" onClick={onClose}>×</button>
+        <p className="profile-title">내 프로필</p>
         <div className="account-profile">
           <span>윤</span>
           <div><p>바다를 달리는 중</p><h2>윤바다 님</h2><small>부산 바로거 · 2026년 3월부터</small></div>
@@ -428,11 +446,14 @@ function AccountModal({ points, onClose }: { points: number; onClose: () => void
         </div>
 
         <section className="account-section">
-          <div className="account-section-title"><h3>최근 활동 기록</h3><button>전체보기</button></div>
+          <div className="account-section-title"><h3>{showAll ? "전체 활동 기록" : "최근 활동 기록"}</h3><button onClick={() => setShowAll((current) => !current)}>{showAll ? "접기" : "전체보기"}</button></div>
           <div className="account-activities">
-            <article><b>5.4km</b><div><strong>해운대 해변 바로깅</strong><small>7월 28일 · 48분 · +54P</small></div></article>
-            <article><b>3.2km</b><div><strong>동백섬 한 바퀴</strong><small>7월 27일 · 36분 · +32P</small></div></article>
-            <article><b>4.8km</b><div><strong>광안리 야간 바로깅</strong><small>7월 25일 · 52분 · +48P</small></div></article>
+            {visibleActivities.map((activity) => (
+              <article key={`${activity.title}-${activity.detail}`}>
+                <b>{activity.distance}</b>
+                <div><strong>{activity.title}</strong><small>{activity.detail}</small></div>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -606,13 +627,14 @@ function ActivityModal({
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("plogging");
-  const [points] = useState(6840);
+  const [points, setPoints] = useState(6840);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [activityMode, setActivityMode] = useState<Mode | null>(null);
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [groups, setGroups] = useState<GroupData[]>(initialGroups);
 
-  const completeScan = () => {
+  const completeScan = (earnedPoints: number) => {
+    setPoints((current) => current + earnedPoints);
     setCameraOpen(false);
   };
 
@@ -642,7 +664,7 @@ export default function Home() {
   return (
     <div className="site-shell">
       <div className="phone">
-        <Header points={points} onAccount={() => setAccountOpen(true)} />
+        <Header points={points} onAccount={() => setProfileOpen(true)} />
         <div className="content">
           {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
           {tab === "records" && <RecordsScreen />}
@@ -657,7 +679,7 @@ export default function Home() {
           ))}
         </nav>
         {cameraOpen && <CameraModal onClose={() => setCameraOpen(false)} onComplete={completeScan} />}
-        {accountOpen && <AccountModal points={points} onClose={() => setAccountOpen(false)} />}
+        {profileOpen && <ProfileModal points={points} onClose={() => setProfileOpen(false)} />}
         {activityMode && (
           <ActivityModal
             mode={activityMode}

@@ -306,6 +306,12 @@ button { color: inherit; }
 .success-state h2 { font-size: 22px; }.success-state > p:not(.eyebrow) { font-size: 10px; color: #7a8986; }
 .success-state > strong { display: block; color: var(--coral); font-size: 30px; margin: 22px 0; }
 .success-state > strong.sensor-complete { display: table; margin: 22px auto; color: #3f8f6b; background: #dff0e7; border-radius: 30px; padding: 8px 13px; font-size: 12px; }
+.verification-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 18px 0 8px; }
+.verification-summary > div { background: #edf2eb; border-radius: 11px; padding: 11px 5px; }
+.verification-summary span { display: block; margin-bottom: 6px; color: #7d8b87; font-size: 7px; }
+.verification-summary strong { display: block; color: #173e3b; font-size: 11px; }
+.verification-summary > div:last-child { background: #dff0e7; }.verification-summary > div:last-child strong { color: #3c8d68; }
+.point-rule-note { display: block; margin-bottom: 16px; color: #7c8986; font-size: 7px; }
 .activity-modal { min-height: 390px; padding-top: 45px; }
 .activity-badge { display: inline-block; font-size: 8px; color: #3f8a68; background: #e2f1e8; padding: 5px 9px; border-radius: 20px; font-weight: 800; }
 .live-preview { display: grid; grid-template-columns: repeat(3,1fr); background: #f0f1eb; border-radius: 15px; padding: 14px 5px; margin: 18px 0; }
@@ -341,6 +347,7 @@ button { color: inherit; }
 .group-form input { width: 100%; display: block; margin-top: 4px; border: 1px solid #dfe4dc; border-radius: 9px; padding: 8px 9px; outline: none; font-size: 8px; color: var(--ink); background: white; }
 .group-form input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(79,158,125,.1); }
 .account-modal { max-height: 92%; overflow-y: auto; text-align: left; padding-top: 31px; }
+.profile-title { margin: 0 0 12px; color: #365f55; font-size: 11px; font-weight: 900; }
 .account-profile { display: flex; align-items: center; gap: 12px; }
 .account-profile > span { width: 52px; height: 52px; border-radius: 17px; display: grid; place-items: center; background: #5f8e81; color: white; font-size: 18px; font-weight: 800; }
 .account-profile p { margin: 0 0 2px; font-size: 7px; color: #4f9e7d; font-weight: 800; }
