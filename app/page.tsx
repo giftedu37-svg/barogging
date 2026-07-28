@@ -13,6 +13,7 @@ type GroupData = {
   max: number;
   count: number;
   joined: boolean;
+  owned: boolean;
 };
 
 const navItems: { id: Tab; icon: string; label: string }[] = [
@@ -35,23 +36,27 @@ const groupRank = [
 ];
 
 const initialGroups: GroupData[] = [
-  { id: 1, name: "광안리 아침 바로깅", place: "광안리 만남의 광장", time: "7월 30일 오전 8:00", max: 10, count: 7, joined: false },
-  { id: 2, name: "해운대 노을 러너스", place: "해운대 중앙광장", time: "7월 30일 오후 6:30", max: 12, count: 9, joined: false },
-  { id: 3, name: "송정 주말 클린런", place: "송정해수욕장 입구", time: "8월 1일 오전 9:00", max: 15, count: 11, joined: false },
-  { id: 4, name: "동백섬 한 바퀴", place: "동백섬 관광안내소", time: "8월 2일 오후 5:00", max: 8, count: 5, joined: false },
+  { id: 1, name: "광안리 아침 바로깅", place: "광안리 만남의 광장", time: "7월 30일 오전 8:00", max: 10, count: 7, joined: false, owned: false },
+  { id: 2, name: "해운대 노을 러너스", place: "해운대 중앙광장", time: "7월 30일 오후 6:30", max: 12, count: 9, joined: false, owned: false },
+  { id: 3, name: "송정 주말 클린런", place: "송정해수욕장 입구", time: "8월 1일 오전 9:00", max: 15, count: 11, joined: false, owned: false },
+  { id: 4, name: "동백섬 한 바퀴", place: "동백섬 관광안내소", time: "8월 2일 오후 5:00", max: 8, count: 5, joined: false, owned: false },
 ];
 
-function Header({ points }: { points: number }) {
+const communityRoutes = [
+  { id: 1, title: "동백섬 바다 한 바퀴", area: "해운대 · 동백섬", distance: "3.2km", time: "48분", bins: 3, author: "민지", avatar: "민", likes: 248, tone: "mint" },
+  { id: 2, title: "광안대교 노을 코스", area: "수영구 · 광안리", distance: "4.6km", time: "1시간 5분", bins: 4, author: "부산러너", avatar: "부", likes: 193, tone: "coral" },
+  { id: 3, title: "송정 파도 따라 걷기", area: "해운대 · 송정", distance: "5.1km", time: "1시간 12분", bins: 5, author: "파도맘", avatar: "파", likes: 156, tone: "blue" },
+  { id: 4, title: "이기대 해안 산책길", area: "남구 · 이기대", distance: "6.8km", time: "1시간 38분", bins: 3, author: "초록발걸음", avatar: "초", likes: 132, tone: "sand" },
+];
+
+function Header({ points, onAccount }: { points: number; onAccount: () => void }) {
   return (
     <header className="topbar">
-      <div className="brand">
-        <span className="brand-mark">〰</span>
-        <span>바로깅</span>
-      </div>
+      <div className="brand"><span>바로깅</span></div>
       <button className="point-pill" aria-label="내 포인트">
-        <span>◆</span> {points.toLocaleString()} P
+        {points.toLocaleString()} P
       </button>
-      <button className="avatar" aria-label="내 프로필">윤</button>
+      <button className="account-button" onClick={onAccount}>내 계정</button>
     </header>
   );
 }
@@ -149,19 +154,25 @@ function RecordsScreen() {
       </section>
 
       <section className="section-block route-section">
-        <div className="section-head"><h2>추천 플로깅 코스</h2><button className="text-button">전체보기</button></div>
-        <article className="route-card">
-          <div className="route-map">
-            <span className="route-line">⌁⌁⌁⌁</span>
-            <i className="pin p1">●</i><i className="pin p2">◆</i><i className="pin p3">●</i>
-          </div>
-          <div className="route-info">
-            <span className="route-tag">지금 인기</span>
-            <h3>동백섬 바다 한 바퀴</h3>
-            <p>3.2km · 약 48분 · 스마트 쓰레기통 3개</p>
-            <div><span>♡ 248</span><button onClick={() => alert("코스 공유 링크가 복사되었어요!")}>코스 공유 ↗</button></div>
-          </div>
-        </article>
+        <div className="section-head"><h2>부산 사용자 추천 코스</h2><button className="text-button">코스 올리기</button></div>
+        <p className="route-subtitle">부산에서 바로깅 중인 사람들이 직접 공유했어요.</p>
+        <div className="route-feed">
+          {communityRoutes.map((route, index) => (
+            <article className="community-route" key={route.id}>
+              <div className={`route-map ${route.tone}`}>
+                <span className="route-line">⌁⌁⌁⌁</span>
+                <i className="pin p1">●</i><i className="pin p2">◆</i><i className="pin p3">●</i>
+                {index === 0 && <b>인기</b>}
+              </div>
+              <div className="route-info">
+                <div className="route-author"><span>{route.avatar}</span><strong>{route.author}</strong><small>{route.area}</small></div>
+                <h3>{route.title}</h3>
+                <p>{route.distance} · 약 {route.time} · 수거함 {route.bins}개</p>
+                <div><span>♡ {route.likes}</span><button onClick={() => alert(`${route.title} 코스 링크를 복사했어요!`)}>공유 ↗</button></div>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );
@@ -380,18 +391,58 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   );
 }
 
+function AccountModal({ points, onClose }: { points: number; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop">
+      <div className="account-modal">
+        <button className="modal-close" onClick={onClose}>×</button>
+        <div className="account-profile">
+          <span>윤</span>
+          <div><p>바다를 달리는 중</p><h2>윤바다 님</h2><small>부산 바로거 · 2026년 3월부터</small></div>
+        </div>
+        <div className="account-stats">
+          <div><span>누적 거리</span><strong>128.6 km</strong></div>
+          <div><span>활동 시간</span><strong>26시간 42분</strong></div>
+          <div><span>보유 포인트</span><strong>{points.toLocaleString()} P</strong></div>
+        </div>
+
+        <section className="account-section">
+          <div className="account-section-title"><h3>최근 활동 기록</h3><button>전체보기</button></div>
+          <div className="account-activities">
+            <article><b>5.4km</b><div><strong>해운대 해변 바로깅</strong><small>7월 28일 · 48분 · +54P</small></div></article>
+            <article><b>3.2km</b><div><strong>동백섬 한 바퀴</strong><small>7월 27일 · 36분 · +32P</small></div></article>
+            <article><b>4.8km</b><div><strong>광안리 야간 바로깅</strong><small>7월 25일 · 52분 · +48P</small></div></article>
+          </div>
+        </section>
+
+        <section className="account-section privacy-section">
+          <div className="account-section-title"><h3>개인정보</h3><button>수정</button></div>
+          <dl>
+            <div><dt>이름</dt><dd>윤바다</dd></div>
+            <div><dt>휴대폰</dt><dd>010-****-2847</dd></div>
+            <div><dt>이메일</dt><dd>bada***@email.com</dd></div>
+            <div><dt>활동 지역</dt><dd>부산광역시</dd></div>
+          </dl>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function ActivityModal({
   mode,
   onClose,
   groups,
   onToggleJoin,
   onCreateGroup,
+  onDeleteGroup,
 }: {
   mode: Mode;
   onClose: () => void;
   groups: GroupData[];
   onToggleJoin: (id: number) => void;
-  onCreateGroup: (group: Omit<GroupData, "id" | "joined">) => void;
+  onCreateGroup: (group: Omit<GroupData, "id" | "joined" | "owned">) => void;
+  onDeleteGroup: (id: number) => void;
 }) {
   const [groupName, setGroupName] = useState("");
   const [groupPlace, setGroupPlace] = useState("");
@@ -430,7 +481,10 @@ function ActivityModal({
               <article className="open-group" key={group.id}>
                 <div className="open-group-head">
                   <div><span>모집 중</span><h3>{group.name}</h3></div>
-                  <strong>{group.count}<small> / {group.max}명</small></strong>
+                  <div className="group-actions">
+                    <strong>{group.count}<small> / {group.max}명</small></strong>
+                    {group.owned && <button onClick={() => onDeleteGroup(group.id)}>삭제</button>}
+                  </div>
                 </div>
                 <p>⌖ {group.place} · {group.time}</p>
                 <button
@@ -479,6 +533,7 @@ export default function Home() {
   const [points] = useState(6840);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [activityMode, setActivityMode] = useState<Mode | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [groups, setGroups] = useState<GroupData[]>(initialGroups);
 
   const completeScan = () => {
@@ -497,16 +552,22 @@ export default function Home() {
     }));
   };
 
-  const createGroup = (group: Omit<GroupData, "id" | "joined">) => {
-    setGroups((current) => [{ ...group, id: Date.now(), joined: true }, ...current]);
+  const createGroup = (group: Omit<GroupData, "id" | "joined" | "owned">) => {
+    setGroups((current) => [{ ...group, id: Date.now(), joined: true, owned: true }, ...current]);
     alert("새 그룹이 모집 목록 맨 위에 추가됐어요!");
+  };
+
+  const deleteGroup = (id: number) => {
+    if (window.confirm("내가 만든 이 그룹을 삭제할까요?")) {
+      setGroups((current) => current.filter((group) => group.id !== id));
+    }
   };
 
   return (
     <div className="site-shell">
       <div className="phone">
         <div className="statusbar"><span>9:41</span><div><i></i><i></i><b>▰</b></div></div>
-        <Header points={points} />
+        <Header points={points} onAccount={() => setAccountOpen(true)} />
         <div className="content">
           {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
           {tab === "records" && <RecordsScreen />}
@@ -521,6 +582,7 @@ export default function Home() {
           ))}
         </nav>
         {cameraOpen && <CameraModal onClose={() => setCameraOpen(false)} onComplete={completeScan} />}
+        {accountOpen && <AccountModal points={points} onClose={() => setAccountOpen(false)} />}
         {activityMode && (
           <ActivityModal
             mode={activityMode}
@@ -528,6 +590,7 @@ export default function Home() {
             groups={groups}
             onToggleJoin={toggleJoin}
             onCreateGroup={createGroup}
+            onDeleteGroup={deleteGroup}
           />
         )}
       </div>
