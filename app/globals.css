@@ -127,6 +127,9 @@ button { color: inherit; }
 .segmented { display: flex; background: #eeefe9; padding: 2px; border-radius: 20px; }
 .segmented button { border: 0; background: transparent; padding: 4px 9px; font-size: 8px; border-radius: 20px; cursor: pointer; }
 .segmented .active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,.08); font-weight: 800; }
+.metric-toggle { display: flex; gap: 5px; margin-top: 9px; }
+.metric-toggle button { border: 1px solid #dde3dc; background: white; padding: 5px 9px; border-radius: 20px; color: #7e8c89; font-size: 8px; cursor: pointer; }
+.metric-toggle button.active { background: var(--deep); color: white; border-color: var(--deep); font-weight: 800; }
 .rank-list { margin-top: 9px; border-top: 1px solid var(--line); }
 .rank-item { display: flex; align-items: center; gap: 9px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
 .rank-item > b { width: 15px; font-size: 11px; text-align: center; }
@@ -153,8 +156,18 @@ button { color: inherit; }
 .map-screen { padding: 10px 0 0; display: flex; flex-direction: column; min-height: 100%; }
 .map-head { display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
 .locate-button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #dfe6df; background: white; box-shadow: 0 4px 10px rgba(30,60,50,.08); font-size: 18px; }
+.search-wrap { position: relative; z-index: 12; }
 .map-search { margin: 12px 18px 9px; border-radius: 12px; border: 1px solid #e3e6df; background: white; height: 39px; display: flex; align-items: center; padding: 0 12px; gap: 7px; box-shadow: 0 4px 12px rgba(32,65,56,.06); position: relative; z-index: 5; }
 .map-search input { border: 0; outline: none; width: 100%; font-size: 10px; color: var(--ink); background: transparent; }
+.map-search button { border: 0; background: #eff1ec; width: 20px; height: 20px; border-radius: 50%; color: #7c8986; cursor: pointer; }
+.search-results { position: absolute; left: 18px; right: 18px; top: 50px; background: white; border-radius: 13px; box-shadow: 0 12px 28px rgba(25,63,55,.18); border: 1px solid #e4e7df; overflow: hidden; z-index: 15; }
+.search-results > button { width: 100%; border: 0; border-bottom: 1px solid #edf0ea; background: white; padding: 9px 10px; display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; }
+.search-results > button:hover { background: #f4f8f4; }
+.search-results > button > span { width: 27px; height: 27px; border-radius: 9px; display: grid; place-items: center; background: #e1f0e7; color: #4b9373; }
+.search-results > button > div { flex: 1; }
+.search-results strong { display: block; font-size: 9px; }.search-results small { display: block; color: #87938f; font-size: 7px; margin-top: 2px; }
+.search-results b { font-size: 10px; color: #77908a; }
+.search-results > p { margin: 0; padding: 15px; color: #7c8986; font-size: 9px; text-align: center; }
 .map-canvas { flex: 1; min-height: 240px; position: relative; overflow: hidden; background: #e9eddf; }
 .map-canvas::after { content: ""; position: absolute; left: -45px; top: -15px; width: 140px; height: 360px; border-radius: 50%; background: #a9d7d3; border-right: 12px solid rgba(255,255,255,.45); }
 .ocean-label { position: absolute; z-index: 2; left: 15px; top: 135px; color: rgba(255,255,255,.85); font-size: 10px; text-align: center; letter-spacing: .12em; transform: rotate(-8deg); }
@@ -188,6 +201,7 @@ button { color: inherit; }
 .reward-hero p { margin: 0; font-size: 10px; color: #aec9c2; }
 .reward-hero h1 { margin: 8px 0 7px; font-size: 32px; letter-spacing: -.04em; }.reward-hero h1 small { font-size: 13px; }
 .reward-hero > span { font-size: 8px; background: rgba(255,255,255,.12); padding: 4px 8px; border-radius: 10px; }
+.reward-rate { display: block; width: fit-content; margin-top: 9px; font-size: 8px; color: #173e3b; background: #cfeade; border-radius: 9px; padding: 5px 8px; }
 .wave-balance { position: absolute; width: 300px; height: 130px; border: 24px solid #5fa987; border-radius: 50%; right: -100px; bottom: -90px; opacity: .75; }
 .wave-balance::after { content: "◆"; position: absolute; font-size: 28px; color: #f2b66b; left: 70px; top: -22px; transform: rotate(15deg); }
 .attendance { margin: -19px 14px 0; padding: 15px; background: white; border-radius: 18px; position: relative; z-index: 2; box-shadow: 0 7px 20px rgba(34,66,57,.09); }
@@ -206,6 +220,8 @@ button { color: inherit; }
 .coupon-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 9px; }
 .coupon-row article { background: #f1f0e8; padding: 12px; border-radius: 15px; }
 .coupon-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; font-size: 15px; }.coupon-icon.coffee { background: #ffd9ce; color: #d96850; }.coupon-icon.bag { background: #d9eadd; color: #4a8968; }
+.coupon-icon.transit { background: #dce8fa; color: #4e78bd; }.coupon-icon.store { background: #fff0c9; color: #aa7a1e; }
+.coupon-icon.donate { background: #f8dce5; color: #c45778; }.coupon-icon.local { background: #e5ddf5; color: #7960ad; }
 .coupon-row p { margin: 8px 0 3px; font-size: 9px; font-weight: 700; }.coupon-row strong { display: block; font-size: 11px; }
 .coupon-row button { width: 100%; margin-top: 8px; border: 1px solid #d8ddd5; background: white; padding: 5px; border-radius: 8px; font-size: 8px; cursor: pointer; }
 .point-history { margin: 18px 18px 0; border-top: 1px solid var(--line); }
@@ -250,14 +266,19 @@ button { color: inherit; }
 .success-ring { width: 76px; height: 76px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 50%; background: #d9eee3; color: #4b9b75; font-size: 35px; box-shadow: 0 0 0 10px #eef7f1; }
 .success-state h2 { font-size: 22px; }.success-state > p:not(.eyebrow) { font-size: 10px; color: #7a8986; }
 .success-state > strong { display: block; color: var(--coral); font-size: 30px; margin: 22px 0; }
+.success-state > strong.sensor-complete { display: table; margin: 22px auto; color: #3f8f6b; background: #dff0e7; border-radius: 30px; padding: 8px 13px; font-size: 12px; }
 .activity-modal { min-height: 390px; padding-top: 45px; }
 .activity-badge { display: inline-block; font-size: 8px; color: #3f8a68; background: #e2f1e8; padding: 5px 9px; border-radius: 20px; font-weight: 800; }
 .live-preview { display: grid; grid-template-columns: repeat(3,1fr); background: #f0f1eb; border-radius: 15px; padding: 14px 5px; margin: 18px 0; }
 .live-preview span { border-right: 1px solid #d8ddd6; }.live-preview span:last-child { border: 0; }
 .live-preview i { display: block; font-size: 7px; color: #85928f; font-style: normal; margin-bottom: 5px; }.live-preview b { font-size: 12px; }
+.distance-rule { margin: -8px 0 13px !important; color: #3d8d69 !important; font-size: 8px !important; font-weight: 800; }
 .group-modal { max-height: 91%; overflow-y: auto; padding-top: 28px; text-align: left; }
 .group-modal > .activity-badge { display: table; margin: 0 auto; }
 .group-modal > h2 { text-align: center; margin-bottom: 14px; }
+.recruiting-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.recruiting-head strong { font-size: 10px; }.recruiting-head span { font-size: 8px; color: #4a8c6d; background: #e0f0e6; padding: 3px 7px; border-radius: 20px; }
+.open-group-list { display: grid; gap: 8px; max-height: 235px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
 .open-group { background: #e5f1e9; border-radius: 15px; padding: 12px; }
 .open-group-head { display: flex; justify-content: space-between; align-items: center; }
 .open-group-head div > span { color: #398766; font-size: 7px; font-weight: 800; }
@@ -267,6 +288,7 @@ button { color: inherit; }
 .open-group > p { font-size: 8px; color: #71827e; margin: 8px 0 10px; }
 .join-button, .cancel-join { width: 100%; border: 0; padding: 8px; border-radius: 9px; font-size: 9px; font-weight: 800; cursor: pointer; }
 .join-button { background: #4f9e7d; color: white; }
+.join-button:disabled { background: #a9b7b0; cursor: default; }
 .cancel-join { background: white; color: #d6614e; border: 1px solid #edc7be; }
 .form-divider { display: flex; align-items: center; gap: 8px; margin: 14px 0 10px; color: #84918e; font-size: 8px; }
 .form-divider::before, .form-divider::after { content: ""; flex: 1; height: 1px; background: #e0e4de; }

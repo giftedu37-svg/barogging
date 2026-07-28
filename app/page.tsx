@@ -4,6 +4,16 @@ import { useEffect, useRef, useState } from "react";
 
 type Tab = "plogging" | "records" | "map" | "rewards";
 type Mode = "solo" | "group";
+type RankMetric = "distance" | "time";
+type GroupData = {
+  id: number;
+  name: string;
+  place: string;
+  time: string;
+  max: number;
+  count: number;
+  joined: boolean;
+};
 
 const navItems: { id: Tab; icon: string; label: string }[] = [
   { id: "plogging", icon: "⌁", label: "플로깅" },
@@ -13,15 +23,22 @@ const navItems: { id: Tab; icon: string; label: string }[] = [
 ];
 
 const soloRank = [
-  { rank: 1, name: "바다지킴이", amount: "38.4 kg", avatar: "민", color: "#fd8d68" },
-  { rank: 2, name: "푸른파도", amount: "32.1 kg", avatar: "윤", color: "#6e9df5" },
-  { rank: 3, name: "조개소년", amount: "28.7 kg", avatar: "준", color: "#f1bd55" },
+  { rank: 1, name: "바다지킴이", distance: "84.6 km", time: "12시간 48분", avatar: "민", color: "#fd8d68" },
+  { rank: 2, name: "푸른파도", distance: "76.2 km", time: "11시간 32분", avatar: "윤", color: "#6e9df5" },
+  { rank: 3, name: "조개소년", distance: "68.9 km", time: "10시간 15분", avatar: "준", color: "#f1bd55" },
 ];
 
 const groupRank = [
-  { rank: 1, name: "해운대 어벤져스", amount: "126.8 kg", avatar: "해", color: "#fd8d68" },
-  { rank: 2, name: "파도 타는 사람들", amount: "109.2 kg", avatar: "파", color: "#6e9df5" },
-  { rank: 3, name: "블루 클린업", amount: "94.5 kg", avatar: "블", color: "#69bf91" },
+  { rank: 1, name: "해운대 어벤져스", distance: "326.8 km", time: "48시간 20분", avatar: "해", color: "#fd8d68" },
+  { rank: 2, name: "파도 타는 사람들", distance: "289.2 km", time: "43시간 10분", avatar: "파", color: "#6e9df5" },
+  { rank: 3, name: "블루 클린업", distance: "244.5 km", time: "39시간 42분", avatar: "블", color: "#69bf91" },
+];
+
+const initialGroups: GroupData[] = [
+  { id: 1, name: "광안리 아침 바로깅", place: "광안리 만남의 광장", time: "7월 30일 오전 8:00", max: 10, count: 7, joined: false },
+  { id: 2, name: "해운대 노을 러너스", place: "해운대 중앙광장", time: "7월 30일 오후 6:30", max: 12, count: 9, joined: false },
+  { id: 3, name: "송정 주말 클린런", place: "송정해수욕장 입구", time: "8월 1일 오전 9:00", max: 15, count: 11, joined: false },
+  { id: 4, name: "동백섬 한 바퀴", place: "동백섬 관광안내소", time: "8월 2일 오후 5:00", max: 8, count: 5, joined: false },
 ];
 
 function Header({ points }: { points: number }) {
@@ -45,7 +62,7 @@ function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
       <section className="welcome">
         <p className="eyebrow">오늘도 바다를 가볍게</p>
         <h1>어떻게 주울까요?</h1>
-        <p>걸을수록 깨끗해지고, 주울수록 포인트가 쌓여요.</p>
+        <p>플로깅 거리 1km마다 10포인트가 쌓여요.</p>
       </section>
 
       <section className="mode-stack">
@@ -92,6 +109,7 @@ function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
 
 function RecordsScreen() {
   const [ranking, setRanking] = useState<Mode>("group");
+  const [metric, setMetric] = useState<RankMetric>("distance");
   const ranks = ranking === "group" ? groupRank : soloRank;
   return (
     <main className="screen">
@@ -108,19 +126,23 @@ function RecordsScreen() {
 
       <section className="section-block">
         <div className="section-head">
-          <h2>쓰레기 수거 랭킹</h2>
+          <h2>플로깅 랭킹</h2>
           <div className="segmented">
             <button className={ranking === "group" ? "active" : ""} onClick={() => setRanking("group")}>그룹</button>
             <button className={ranking === "solo" ? "active" : ""} onClick={() => setRanking("solo")}>개인</button>
           </div>
+        </div>
+        <div className="metric-toggle">
+          <button className={metric === "distance" ? "active" : ""} onClick={() => setMetric("distance")}>누적 거리</button>
+          <button className={metric === "time" ? "active" : ""} onClick={() => setMetric("time")}>누적 시간</button>
         </div>
         <div className="rank-list">
           {ranks.map((item) => (
             <div className="rank-item" key={item.rank}>
               <b>{item.rank}</b>
               <span className="rank-avatar" style={{ background: item.color }}>{item.avatar}</span>
-              <div><strong>{item.name}</strong><small>{item.rank === 1 ? "이번 주 최고 기록" : "꾸준히 줍는 중"}</small></div>
-              <em>{item.amount}</em>
+              <div><strong>{item.name}</strong><small>{item.rank === 1 ? "이번 달 최고 기록" : "꾸준히 달리는 중"}</small></div>
+              <em>{metric === "distance" ? item.distance : item.time}</em>
             </div>
           ))}
         </div>
@@ -147,24 +169,52 @@ function RecordsScreen() {
 
 function MapScreen({ onCamera }: { onCamera: () => void }) {
   const [selected, setSelected] = useState(1);
+  const [query, setQuery] = useState("");
   const bins = [
     { id: 1, name: "해운대 중앙광장", distance: "120m", fill: "32%", status: "여유" },
     { id: 2, name: "동백섬 입구", distance: "380m", fill: "71%", status: "보통" },
     { id: 3, name: "미포 산책로", distance: "620m", fill: "18%", status: "여유" },
+    { id: 4, name: "광안리 만남의 광장", distance: "1.2km", fill: "45%", status: "여유" },
+    { id: 5, name: "송정해수욕장 입구", distance: "2.8km", fill: "63%", status: "보통" },
   ];
   const bin = bins.find((b) => b.id === selected)!;
+  const searchResults = query.trim()
+    ? bins.filter((b) => b.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : [];
   return (
     <main className="screen map-screen">
       <section className="map-head">
         <div><p className="eyebrow">내 주변 스마트 수거함</p><h1>가까운 쓰레기통</h1></div>
         <button className="locate-button" aria-label="현재 위치">◎</button>
       </section>
-      <div className="map-search"><span>⌕</span><input aria-label="장소 검색" placeholder="해변이나 장소를 검색해보세요" /></div>
+      <div className="search-wrap">
+        <div className="map-search">
+          <span>⌕</span>
+          <input
+            aria-label="쓰레기통 위치 검색"
+            placeholder="해변이나 장소를 검색해보세요"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {query && <button aria-label="검색어 지우기" onClick={() => setQuery("")}>×</button>}
+        </div>
+        {query && (
+          <div className="search-results">
+            {searchResults.length > 0 ? searchResults.map((result) => (
+              <button key={result.id} onClick={() => { setSelected(result.id); setQuery(""); }}>
+                <span>♲</span>
+                <div><strong>{result.name}</strong><small>현재 위치에서 {result.distance} · {result.status}</small></div>
+                <b>→</b>
+              </button>
+            )) : <p>검색 결과가 없어요. 다른 해변 이름을 입력해 보세요.</p>}
+          </div>
+        )}
+      </div>
       <section className="map-canvas">
         <div className="ocean-label">HAEUNDAE<br /><small>BEACH</small></div>
         <span className="road r1"></span><span className="road r2"></span><span className="road r3"></span>
         <span className="park park1"></span><span className="park park2"></span>
-        {bins.map((b, i) => (
+        {bins.slice(0, 3).map((b, i) => (
           <button key={b.id} aria-label={b.name} onClick={() => setSelected(b.id)} className={`map-pin pin-${i + 1} ${selected === b.id ? "selected" : ""}`}>
             <span>♲</span>
           </button>
@@ -187,12 +237,21 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
 
 function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => void }) {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const rewards = [
+    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: "3,000 P" },
+    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: "5,000 P" },
+    { icon: "▰", className: "transit", name: "대중교통 충전권", price: "2,000 P" },
+    { icon: "◇", className: "store", name: "편의점 상품권", price: "4,000 P" },
+    { icon: "♥", className: "donate", name: "해양 보호 기부", price: "1,000 P" },
+    { icon: "⌂", className: "local", name: "지역사랑 상품권", price: "6,000 P" },
+  ];
   return (
     <main className="screen rewards-screen">
       <section className="reward-hero">
         <p>나의 바다 포인트</p>
         <h1>{points.toLocaleString()} <small>P</small></h1>
-        <span>이번 달 +1,240 P</span>
+        <span>이번 달 124km · +1,240 P</span>
+        <b className="reward-rate">1km 달릴 때마다 10P</b>
         <div className="wave-balance"></div>
       </section>
       <section className="attendance">
@@ -200,24 +259,30 @@ function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => v
           <div><span className="streak-icon">♨</span><h2>7일 연속 출석</h2></div>
           <strong>7월 <button aria-label="월 변경">⌄</button></strong>
         </div>
-        <p>한 달 20일을 채우면 <b>500P 보너스!</b></p>
+        <p>이번 달 매일 출석하면 <b>30P 보너스!</b></p>
         <div className="calendar-labels">{["월", "화", "수", "목", "금", "토", "일"].map(d => <span key={d}>{d}</span>)}</div>
         <div className="calendar">
           {days.map((day) => <span key={day} className={day <= 12 ? "checked" : day === 28 ? "today" : ""}>{day <= 12 ? "✓" : day}</span>)}
         </div>
-        <div className="attendance-progress"><span></span></div>
-        <small>12 / 20일 달성</small>
+        <div className="attendance-progress"><span style={{ width: "39%" }}></span></div>
+        <small>12 / 31일 출석</small>
       </section>
       <section className="reward-shop">
         <div className="section-head"><h2>포인트로 바꿔요</h2><button className="text-button">이용내역</button></div>
         <div className="coupon-row">
-          <article><span className="coupon-icon coffee">♨</span><p>카페 음료 쿠폰</p><strong>3,000 P</strong><button onClick={onRedeem}>교환하기</button></article>
-          <article><span className="coupon-icon bag">▱</span><p>친환경 마켓 쿠폰</p><strong>5,000 P</strong><button onClick={onRedeem}>교환하기</button></article>
+          {rewards.map((reward) => (
+            <article key={reward.name}>
+              <span className={`coupon-icon ${reward.className}`}>{reward.icon}</span>
+              <p>{reward.name}</p><strong>{reward.price}</strong>
+              <button onClick={onRedeem}>교환하기</button>
+            </article>
+          ))}
         </div>
       </section>
       <section className="point-history">
-        <div><span className="history-icon">♲</span><p><strong>스마트 수거함 인증</strong><small>오늘 · 해운대 중앙광장</small></p><b>+180 P</b></div>
-        <div><span className="history-icon">⌁</span><p><strong>플로깅 활동 완료</strong><small>어제 · 동백섬 코스</small></p><b>+320 P</b></div>
+        <div><span className="history-icon">⌁</span><p><strong>플로깅 5.4km 완료</strong><small>오늘 · 해운대 해변 코스</small></p><b>+54 P</b></div>
+        <div><span className="history-icon">⌁</span><p><strong>플로깅 3.2km 완료</strong><small>어제 · 동백섬 코스</small></p><b>+32 P</b></div>
+        <div><span className="history-icon">♨</span><p><strong>6월 한 달 출석 완료</strong><small>6월 30일 · 출석 보너스</small></p><b>+30 P</b></div>
       </section>
     </main>
   );
@@ -288,8 +353,8 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
               {cameraOn && <i className="focus-frame"></i>}
             </div>
             <p className="eyebrow">SMART BIN #H12</p>
-            <h2>{step === 0 ? "카메라로 배출을 인증해요" : step === 1 ? "배출 사진을 확인하고 있어요" : "센서와 무게를 확인 중이에요"}</h2>
-            <p>{step === 0 ? "쓰레기를 수거함에 넣는 모습이 잘 보이게 촬영해 주세요." : step === 1 ? "올바른 배출 모습이 선명하게 촬영됐어요." : "센서가 1.8kg의 쓰레기를 감지했어요."}</p>
+            <h2>{step === 0 ? "카메라로 배출을 인증해요" : step === 1 ? "배출 사진을 확인하고 있어요" : "투입 센서를 확인 중이에요"}</h2>
+            <p>{step === 0 ? "쓰레기를 수거함에 넣는 모습이 잘 보이게 촬영해 주세요." : step === 1 ? "올바른 배출 모습이 선명하게 촬영됐어요." : "수거함 센서가 쓰레기 투입을 확인했어요."}</p>
             {cameraError && <p className="camera-error">{cameraError}</p>}
             {step === 0 && (
               <button className="camera-button" onClick={cameraOn ? captureWaste : startCamera}>
@@ -304,10 +369,10 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
           <div className="success-state">
             <span className="success-ring">✓</span>
             <p className="eyebrow">인증 완료</p>
-            <h2>바다가 1.8kg 가벼워졌어요!</h2>
-            <p>올바른 배출이 확인되어 포인트를 지급했어요.</p>
-            <strong>+180 P</strong>
-            <button className="primary-button" onClick={onComplete}>포인트 확인하기</button>
+            <h2>올바른 배출이 확인됐어요!</h2>
+            <p>카메라와 투입 센서로 인증했어요. 포인트는 플로깅 거리만큼 적립됩니다.</p>
+            <strong className="sensor-complete">센서 인증 완료</strong>
+            <button className="primary-button" onClick={onComplete}>확인</button>
           </div>
         )}
       </div>
@@ -318,16 +383,39 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
 function ActivityModal({
   mode,
   onClose,
-  joined,
-  participantCount,
+  groups,
   onToggleJoin,
+  onCreateGroup,
 }: {
   mode: Mode;
   onClose: () => void;
-  joined: boolean;
-  participantCount: number;
-  onToggleJoin: () => void;
+  groups: GroupData[];
+  onToggleJoin: (id: number) => void;
+  onCreateGroup: (group: Omit<GroupData, "id" | "joined">) => void;
 }) {
+  const [groupName, setGroupName] = useState("");
+  const [groupPlace, setGroupPlace] = useState("");
+  const [groupTime, setGroupTime] = useState("");
+  const [groupMax, setGroupMax] = useState(10);
+
+  const createGroup = () => {
+    if (!groupName.trim() || !groupPlace.trim() || !groupTime) {
+      alert("그룹 이름, 시작 지점, 만나는 시간을 모두 입력해 주세요.");
+      return;
+    }
+    onCreateGroup({
+      name: groupName.trim(),
+      place: groupPlace.trim(),
+      time: groupTime.replace("T", " "),
+      max: groupMax,
+      count: 1,
+    });
+    setGroupName("");
+    setGroupPlace("");
+    setGroupTime("");
+    setGroupMax(10);
+  };
+
   if (mode === "group") {
     return (
       <div className="modal-backdrop">
@@ -336,27 +424,36 @@ function ActivityModal({
           <span className="activity-badge">같이 만드는 변화</span>
           <h2>함께 플로깅</h2>
 
-          <article className="open-group">
-            <div className="open-group-head">
-              <div><span>모집 중</span><h3>광안리 아침 바로깅</h3></div>
-              <strong>{participantCount}<small> / 10명</small></strong>
-            </div>
-            <p>⌖ 광안리 만남의 광장 · 7월 30일 오전 8:00</p>
-            <button className={joined ? "cancel-join" : "join-button"} onClick={onToggleJoin}>
-              {joined ? "참여 취소" : "참여하기"}
-            </button>
-          </article>
+          <div className="recruiting-head"><strong>모집 중인 그룹</strong><span>{groups.length}개</span></div>
+          <div className="open-group-list">
+            {groups.map((group) => (
+              <article className="open-group" key={group.id}>
+                <div className="open-group-head">
+                  <div><span>모집 중</span><h3>{group.name}</h3></div>
+                  <strong>{group.count}<small> / {group.max}명</small></strong>
+                </div>
+                <p>⌖ {group.place} · {group.time}</p>
+                <button
+                  className={group.joined ? "cancel-join" : "join-button"}
+                  onClick={() => onToggleJoin(group.id)}
+                  disabled={!group.joined && group.count >= group.max}
+                >
+                  {group.joined ? "참여 취소" : group.count >= group.max ? "모집 완료" : "참여하기"}
+                </button>
+              </article>
+            ))}
+          </div>
 
           <div className="form-divider"><span>새 그룹 만들기</span></div>
           <div className="group-form">
-            <label>그룹 이름<input placeholder="예: 주말 바다 지킴이" aria-label="그룹 이름" /></label>
-            <label>시작 지점<input placeholder="예: 해운대 중앙광장" aria-label="시작 지점" /></label>
+            <label>그룹 이름<input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="예: 주말 바다 지킴이" aria-label="그룹 이름" /></label>
+            <label>시작 지점<input value={groupPlace} onChange={(e) => setGroupPlace(e.target.value)} placeholder="예: 해운대 중앙광장" aria-label="시작 지점" /></label>
             <div>
-              <label>만나는 시간<input type="datetime-local" aria-label="만나는 시간" /></label>
-              <label>인원 수<input type="number" min="2" max="50" defaultValue="10" aria-label="인원 수" /></label>
+              <label>만나는 시간<input value={groupTime} onChange={(e) => setGroupTime(e.target.value)} type="datetime-local" aria-label="만나는 시간" /></label>
+              <label>인원 수<input value={groupMax} onChange={(e) => setGroupMax(Number(e.target.value))} type="number" min="2" max="50" aria-label="인원 수" /></label>
             </div>
           </div>
-          <button className="primary-button" onClick={() => { alert("새 플로깅 그룹이 만들어졌어요!"); onClose(); }}>그룹 만들기</button>
+          <button className="primary-button" onClick={createGroup}>그룹 만들기</button>
         </div>
       </div>
     );
@@ -370,6 +467,7 @@ function ActivityModal({
         <h2>혼자 플로깅</h2>
         <p>현재 위치에서 바로 기록을 시작할까요?</p>
         <div className="live-preview"><span><i>거리</i><b>0.00 km</b></span><span><i>시간</i><b>00:00</b></span><span><i>걸음</i><b>0</b></span></div>
+        <p className="distance-rule">달린 거리 × 10P · 1km부터 적립</p>
         <button className="primary-button" onClick={() => { alert("플로깅 기록을 시작했어요!"); onClose(); }}>기록 시작하기</button>
       </div>
     </div>
@@ -378,23 +476,30 @@ function ActivityModal({
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("plogging");
-  const [points, setPoints] = useState(6840);
+  const [points] = useState(6840);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [activityMode, setActivityMode] = useState<Mode | null>(null);
-  const [joined, setJoined] = useState(false);
-  const [participantCount, setParticipantCount] = useState(7);
+  const [groups, setGroups] = useState<GroupData[]>(initialGroups);
 
   const completeScan = () => {
-    setPoints((p) => p + 180);
     setCameraOpen(false);
-    setTab("rewards");
   };
 
-  const toggleJoin = () => {
-    setJoined((current) => {
-      setParticipantCount((count) => current ? Math.max(0, count - 1) : count + 1);
-      return !current;
-    });
+  const toggleJoin = (id: number) => {
+    setGroups((current) => current.map((group) => {
+      if (group.id !== id) return group;
+      const joined = !group.joined;
+      return {
+        ...group,
+        joined,
+        count: joined ? Math.min(group.max, group.count + 1) : Math.max(0, group.count - 1),
+      };
+    }));
+  };
+
+  const createGroup = (group: Omit<GroupData, "id" | "joined">) => {
+    setGroups((current) => [{ ...group, id: Date.now(), joined: true }, ...current]);
+    alert("새 그룹이 모집 목록 맨 위에 추가됐어요!");
   };
 
   return (
@@ -420,9 +525,9 @@ export default function Home() {
           <ActivityModal
             mode={activityMode}
             onClose={() => setActivityMode(null)}
-            joined={joined}
-            participantCount={participantCount}
+            groups={groups}
             onToggleJoin={toggleJoin}
+            onCreateGroup={createGroup}
           />
         )}
       </div>
