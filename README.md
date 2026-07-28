@@ -1,98 +1,68 @@
-# vinext-starter
+# 바로깅 (Barogging)
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+부산 해변 플로깅과 스마트 쓰레기통을 연결한 모바일 웹 앱 프로토타입입니다.
 
-## Prerequisites
+- 배포 주소: https://padojoop-plogging.workspace-925535.chatgpt.site
+- 화면 형태: 휴대폰 전용 반응형 웹
+- 주요 코드: `app/page.tsx`, `app/globals.css`
+- 프레임워크: React 19, Next.js, vinext, Vite
 
-- Node.js `>=22.13.0`
+## 현재 구현된 기능
 
-## Quick Start
+- 닉네임을 포함한 로그인 시작 화면
+- 혼자 플로깅 측정 및 그룹 생성·참여·취소·삭제
+- 측정 중 시간 기록과 종료 후 거리·시간·걸음 수 저장
+- 부산 지역 플로깅 순위와 사용자 추천 코스
+- OpenStreetMap 기반 코스·스마트 쓰레기통 지도
+- 쓰레기통 장소 검색
+- 카메라 사진 배출 인증과 포인트 자동 지급
+- 날짜별 1회 출석 보상
+- 포인트 상품 교환과 보유 포인트 차감
+- 프로필, 활동 기록, 개인정보, 로그아웃 화면
+
+## 교환권 기준
+
+카페 음료 쿠폰, 친환경 마켓 쿠폰, 대중교통 충전권, 편의점 상품권은 동일한 기준을 사용합니다.
+
+| 교환권 | 필요 포인트 |
+|---|---:|
+| 5천원권 | 2,000P |
+| 1만원권 | 4,000P |
+| 3만원권 | 6,000P |
+
+## 로컬 실행
+
+Node.js 22.13 이상이 필요합니다.
 
 ```bash
 npm install
 npm run dev
+```
+
+검사:
+
+```bash
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+## 데이터 저장 범위
 
-## Included Shape
+현재는 프로토타입으로 대부분의 데이터가 브라우저 화면 상태에 저장됩니다. 출석 날짜는 같은 기기의 브라우저 저장소에 보관됩니다. 실제 서비스로 확장할 때는 로그인 계정, 활동 기록, 포인트 내역, 그룹과 추천 코스를 데이터베이스에 연결해야 합니다.
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+## 내일 이어서 작업할 때
 
-## Workspace Auth Headers
+Codex에 아래처럼 요청하면 현재 상태에서 바로 이어가기 쉽습니다.
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+> GitHub의 바로깅 프로젝트를 열고 README와 최근 변경 이력을 확인한 뒤 이어서 작업해줘. 기존 디자인과 기능은 유지하고, 작업이 끝나면 빌드 검사와 배포까지 해줘.
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+추천 다음 작업:
 
-Treat the full name as optional and fall back to email when it is absent:
+1. 계정별 활동 기록과 포인트를 데이터베이스에 영구 저장
+2. 실제 이동 거리와 걸음 수 측정 API 연결
+3. 카메라 사진 업로드 및 검증 서버 연결
+4. 스마트 쓰레기통 장치 API 연동
+5. 그룹·코스 공유 데이터를 사용자 간 동기화
 
-```tsx
-import { headers } from "next/headers";
+## 배포 정보
 
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+`.openai/hosting.json`의 기존 프로젝트 설정을 유지해야 같은 주소로 계속 배포할 수 있습니다. 비밀번호, 토큰, 개인 환경 파일은 GitHub에 올리지 않습니다.
