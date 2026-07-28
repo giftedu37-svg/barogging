@@ -74,7 +74,7 @@ function Header({ points, onAccount }: { points: number; onAccount: () => void }
   );
 }
 
-function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
+function PloggingScreen({ onStart, attendanceCount }: { onStart: (mode: Mode) => void; attendanceCount: number }) {
   return (
     <main className="screen plogging-screen">
       <section className="welcome">
@@ -108,7 +108,7 @@ function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
       <section className="streak-card">
         <div>
           <span className="streak-icon">♨</span>
-          <div><strong>7일 연속 플로깅 중!</strong><small>이번 달 12일 참여했어요</small></div>
+          <div><strong>{attendanceCount}일 연속 플로깅 중!</strong><small>이번 달 {attendanceCount}일 참여했어요</small></div>
         </div>
         <div className="week-row">
           {["월", "화", "수", "목", "금", "토", "일"].map((day, i) => (
@@ -319,7 +319,7 @@ function RewardsScreen({
       </section>
       <section className="attendance">
         <div className="section-head">
-          <div><span className="streak-icon">♨</span><h2>7일 연속 출석</h2></div>
+          <div><span className="streak-icon">♨</span><h2>{claimedDays.length}일 연속 출석</h2></div>
           <strong>7월 <button aria-label="월 변경">⌄</button></strong>
         </div>
         <p>날짜를 눌러 출석하면 <b>매일 1P</b>를 바로 받아요.</p>
@@ -933,7 +933,7 @@ export default function Home() {
       <div className="phone">
         <Header points={points} onAccount={() => setProfileOpen(true)} />
         <div className="content">
-          {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
+          {tab === "plogging" && <PloggingScreen onStart={setActivityMode} attendanceCount={claimedDays.length} />}
           {tab === "records" && <RecordsScreen nickname={nickname} activityRecords={activityRecords} />}
           {tab === "map" && <MapScreen onCamera={() => setCameraOpen(true)} />}
           {tab === "rewards" && (
