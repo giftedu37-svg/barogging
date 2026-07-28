@@ -12,6 +12,12 @@ type ActivityRecord = {
   steps: number;
   createdAt: string;
 };
+type PurchaseRecord = {
+  id: number;
+  name: string;
+  price: number;
+  purchasedAt: string;
+};
 type GroupData = {
   id: number;
   name: string;
@@ -280,11 +286,13 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
 function RewardsScreen({
   points,
   claimedDays,
+  purchaseHistory,
   onRedeem,
   onAttendance,
 }: {
   points: number;
   claimedDays: number[];
+  purchaseHistory: PurchaseRecord[];
   onRedeem: (name: string, price: number) => boolean;
   onAttendance: (day: number) => void;
 }) {
@@ -299,6 +307,7 @@ function RewardsScreen({
     { icon: "⌂", className: "local", name: "지역사랑 상품권", price: 2500, items: [{ name: "부산어묵 교환권", detail: "지역 제휴 매장", price: 2500 }, { name: "씨앗호떡 세트", detail: "부산 전통시장 교환", price: 3200 }, { name: "로컬 카페 이용권", detail: "부산 동네 카페", price: 4500 }] },
   ];
   const [selectedReward, setSelectedReward] = useState<(typeof rewards)[number] | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   return (
     <main className="screen rewards-screen">
       <section className="reward-hero">
@@ -332,7 +341,7 @@ function RewardsScreen({
         <small>{claimedDays.length} / 31일 출석 · 하루 1P</small>
       </section>
       <section className="reward-shop">
-        <div className="section-head"><h2>포인트로 바꿔요</h2><button className="text-button">이용내역</button></div>
+        <div className="section-head"><h2>포인트로 바꿔요</h2><button className="text-button" onClick={() => setHistoryOpen(true)}>이용내역</button></div>
         <div className="coupon-row">
           {rewards.map((reward) => (
             <article key={reward.name}>
@@ -365,6 +374,29 @@ function RewardsScreen({
                 </article>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      {historyOpen && (
+        <div className="modal-backdrop">
+          <div className="exchange-modal history-modal">
+            <button className="modal-close" onClick={() => setHistoryOpen(false)}>×</button>
+            <p className="eyebrow">REWARD HISTORY</p>
+            <h2>교환 이용내역</h2>
+            <p>지금까지 포인트로 교환한 상품이에요.</p>
+            {purchaseHistory.length > 0 ? (
+              <div className="purchase-history-list">
+                {purchaseHistory.map((purchase) => (
+                  <article key={purchase.id}>
+                    <span>✓</span>
+                    <div><strong>{purchase.name}</strong><small>{purchase.purchasedAt} · 교환 완료</small></div>
+                    <b>-{purchase.price.toLocaleString()}P</b>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-history"><b>◇</b><strong>아직 교환한 상품이 없어요</strong><small>상품을 교환하면 이곳에 기록됩니다.</small></div>
+            )}
           </div>
         </div>
       )}
@@ -802,6 +834,8 @@ export default function Home() {
   const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>([]);
   const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const [attendanceReady, setAttendanceReady] = useState(false);
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
+  const [purchaseHistoryReady, setPurchaseHistoryReady] = useState(false);
   const [notice, setNotice] = useState("");
   const noticeTimerRef = useRef<number | null>(null);
 
@@ -829,6 +863,25 @@ export default function Home() {
       // 저장소가 차단된 환경에서는 현재 접속 중인 출석 상태를 유지합니다.
     }
   }, [attendanceReady, claimedDays]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("barogging-purchase-history");
+      if (saved) setPurchaseHistory(JSON.parse(saved));
+    } catch {
+      // 저장소가 차단된 환경에서는 현재 접속 중인 교환 내역을 유지합니다.
+    }
+    setPurchaseHistoryReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!purchaseHistoryReady) return;
+    try {
+      window.localStorage.setItem("barogging-purchase-history", JSON.stringify(purchaseHistory));
+    } catch {
+      // 저장소가 차단된 환경에서는 현재 접속 중인 교환 내역을 유지합니다.
+    }
+  }, [purchaseHistoryReady, purchaseHistory]);
 
   const completeScan = (earnedPoints: number) => {
     setPoints((current) => current + earnedPoints);
@@ -861,7 +914,16 @@ export default function Home() {
   if (!loggedIn) {
     return (
       <div className="site-shell">
-        <div className="phone"><LoginScreen onLogin={(name) => { setNickname(name); setLoggedIn(true); }} /></div>
+        <div className="phone"><LoginScreen onLogin={(name) => {
+          setNickname(name);
+          setClaimedDays([]);
+          try {
+            window.localStorage.setItem("barogging-attendance-2026-07", "[]");
+          } catch {
+            // 저장소가 차단되어도 현재 로그인에서는 출석 상태를 초기화합니다.
+          }
+          setLoggedIn(true);
+        }} /></div>
       </div>
     );
   }
@@ -878,12 +940,19 @@ export default function Home() {
             <RewardsScreen
               points={points}
               claimedDays={claimedDays}
+              purchaseHistory={purchaseHistory}
               onRedeem={(name, price) => {
                 if (points < price) {
                   showNotice("포인트가 부족해요.");
                   return false;
                 }
                 setPoints((current) => current - price);
+                setPurchaseHistory((current) => [{
+                  id: Date.now(),
+                  name,
+                  price,
+                  purchasedAt: new Date().toLocaleDateString("ko-KR"),
+                }, ...current]);
                 showNotice(`교환 완료 · ${name}에 ${price.toLocaleString()}P를 사용했어요.`);
                 return true;
               }}

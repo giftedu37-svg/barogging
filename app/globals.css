@@ -290,6 +290,19 @@ button { color: inherit; }
 .exchange-item-list small { margin-top: 3px; color: #899592; font-size: 7px; }
 .exchange-item-list b { color: #3d8968; font-size: 10px; white-space: nowrap; }
 .exchange-item-list button { border: 0; border-radius: 8px; padding: 7px 9px; background: #173e3b; color: white; font-size: 8px; font-weight: 800; cursor: pointer; }
+.history-modal { min-height: 360px; }
+.purchase-history-list { display: grid; gap: 8px; margin-top: 14px; }
+.purchase-history-list article { display: flex; align-items: center; gap: 9px; padding: 12px; border: 1px solid #dfe5dd; border-radius: 13px; background: white; }
+.purchase-history-list article > span { width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; border-radius: 9px; background: #dff0e7; color: #3d8968; font-size: 10px; font-weight: 900; }
+.purchase-history-list article > div { flex: 1; min-width: 0; }
+.purchase-history-list strong, .purchase-history-list small { display: block; }
+.purchase-history-list strong { overflow: hidden; color: #274f47; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.purchase-history-list small { margin-top: 3px; color: #899592; font-size: 7px; }
+.purchase-history-list b { color: #d36350; font-size: 9px; white-space: nowrap; }
+.empty-history { min-height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #87938f; text-align: center; }
+.empty-history b { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 12px; border-radius: 16px; background: #e8eee8; color: #5b8c77; font-size: 21px; }
+.empty-history strong { color: #48655d; font-size: 10px; }
+.empty-history small { margin-top: 5px; font-size: 7px; }
 .point-history { margin: 18px 18px 0; border-top: 1px solid var(--line); }
 .point-history > div { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .history-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: #e6f1e8; color: var(--green); }
