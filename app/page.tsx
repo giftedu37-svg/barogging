@@ -43,10 +43,10 @@ const initialGroups: GroupData[] = [
 ];
 
 const communityRoutes = [
-  { id: 1, title: "동백섬 바다 한 바퀴", area: "해운대 · 동백섬", distance: "3.2km", time: "48분", bins: 3, author: "민지", avatar: "민", likes: 248, tone: "mint" },
-  { id: 2, title: "광안대교 노을 코스", area: "수영구 · 광안리", distance: "4.6km", time: "1시간 5분", bins: 4, author: "부산러너", avatar: "부", likes: 193, tone: "coral" },
-  { id: 3, title: "송정 파도 따라 걷기", area: "해운대 · 송정", distance: "5.1km", time: "1시간 12분", bins: 5, author: "파도맘", avatar: "파", likes: 156, tone: "blue" },
-  { id: 4, title: "이기대 해안 산책길", area: "남구 · 이기대", distance: "6.8km", time: "1시간 38분", bins: 3, author: "초록발걸음", avatar: "초", likes: 132, tone: "sand" },
+  { id: 1, title: "동백섬 바다 한 바퀴", area: "해운대 · 동백섬", distance: "3.2km", time: "48분", bins: 3, author: "민지", avatar: "민", likes: 248, tone: "mint", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.142%2C35.151%2C129.159%2C35.162&layer=mapnik&marker=35.1568%2C129.1522" },
+  { id: 2, title: "광안대교 노을 코스", area: "수영구 · 광안리", distance: "4.6km", time: "1시간 5분", bins: 4, author: "부산러너", avatar: "부", likes: 193, tone: "coral", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.105%2C35.148%2C129.126%2C35.162&layer=mapnik&marker=35.1532%2C129.1186" },
+  { id: 3, title: "송정 파도 따라 걷기", area: "해운대 · 송정", distance: "5.1km", time: "1시간 12분", bins: 5, author: "파도맘", avatar: "파", likes: 156, tone: "blue", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.191%2C35.171%2C129.211%2C35.184&layer=mapnik&marker=35.1787%2C129.1998" },
+  { id: 4, title: "이기대 해안 산책길", area: "남구 · 이기대", distance: "6.8km", time: "1시간 38분", bins: 3, author: "초록발걸음", avatar: "초", likes: 132, tone: "sand", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.115%2C35.117%2C129.135%2C35.135&layer=mapnik&marker=35.1268%2C129.1237" },
 ];
 
 function Header({ points, onAccount }: { points: number; onAccount: () => void }) {
@@ -162,11 +162,8 @@ function RecordsScreen() {
           {routes.map((route, index) => (
             <article className="community-route" key={route.id}>
               <div className={`route-map ${route.tone}`}>
-                <span className="mini-road mr1"></span><span className="mini-road mr2"></span>
-                <span className="mini-block mb1"></span><span className="mini-block mb2"></span>
-                <span className="route-line">⌁⌁⌁⌁</span>
-                <i className="pin p1">●</i><i className="pin p2">◆</i><i className="pin p3">●</i>
-                <small className="mini-map-label">{route.area.split(" · ")[1]}</small>
+                <iframe title={`${route.title} 지도`} src={route.mapUrl} loading="lazy" tabIndex={-1}></iframe>
+                <small className="mini-map-label">{route.area.split(" · ")[1]} · 실제 지도</small>
                 {index === 0 && <b>인기</b>}
               </div>
               <div className="route-info">
@@ -183,7 +180,7 @@ function RecordsScreen() {
         <CourseUploadModal
           onClose={() => setCourseOpen(false)}
           onCreate={(route) => {
-            setRoutes((current) => [{ ...route, id: Date.now(), author: "윤바다", avatar: "윤", likes: 0, tone: "mint" }, ...current]);
+            setRoutes((current) => [{ ...route, id: Date.now(), author: "윤바다", avatar: "윤", likes: 0, tone: "mint", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.02%2C35.07%2C129.18%2C35.22&layer=mapnik&marker=35.1379%2C129.0751" }, ...current]);
             setCourseOpen(false);
           }}
         />
@@ -196,11 +193,11 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
   const [selected, setSelected] = useState(1);
   const [query, setQuery] = useState("");
   const bins = [
-    { id: 1, name: "해운대 중앙광장", distance: "120m", fill: "32%", status: "여유", area: "해운대해수욕장" },
-    { id: 2, name: "동백섬 입구", distance: "380m", fill: "71%", status: "보통", area: "동백섬 · 마린시티" },
-    { id: 3, name: "미포 산책로", distance: "620m", fill: "18%", status: "여유", area: "미포 · 달맞이길" },
-    { id: 4, name: "광안리 만남의 광장", distance: "1.2km", fill: "45%", status: "여유", area: "광안리해수욕장" },
-    { id: 5, name: "송정해수욕장 입구", distance: "2.8km", fill: "63%", status: "보통", area: "송정해수욕장" },
+    { id: 1, name: "해운대 중앙광장", distance: "120m", fill: "32%", status: "여유", area: "해운대해수욕장", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.151%2C35.154%2C129.169%2C35.166&layer=mapnik&marker=35.1590%2C129.1603" },
+    { id: 2, name: "동백섬 입구", distance: "380m", fill: "71%", status: "보통", area: "동백섬 · 마린시티", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.139%2C35.148%2C129.158%2C35.162&layer=mapnik&marker=35.1548%2C129.1500" },
+    { id: 3, name: "미포 산책로", distance: "620m", fill: "18%", status: "여유", area: "미포 · 달맞이길", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.168%2C35.158%2C129.185%2C35.170&layer=mapnik&marker=35.1629%2C129.1764" },
+    { id: 4, name: "광안리 만남의 광장", distance: "1.2km", fill: "45%", status: "여유", area: "광안리해수욕장", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.106%2C35.148%2C129.126%2C35.162&layer=mapnik&marker=35.1532%2C129.1186" },
+    { id: 5, name: "송정해수욕장 입구", distance: "2.8km", fill: "63%", status: "보통", area: "송정해수욕장", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.192%2C35.172%2C129.209%2C35.184&layer=mapnik&marker=35.1787%2C129.1998" },
   ];
   const bin = bins.find((b) => b.id === selected)!;
   const searchResults = query.trim()
@@ -236,22 +233,9 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
         )}
       </div>
       <section className={`map-canvas map-view-${selected}`}>
-        <div className="map-moving-layer">
-          <div className="ocean-label">{selected === 4 ? "GWANGALLI" : selected === 5 ? "SONGJEONG" : "HAEUNDAE"}<br /><small>BEACH · BUSAN</small></div>
-          <span className="road r1"></span><span className="road r2"></span><span className="road r3"></span>
-          <span className="road r4"></span><span className="road r5"></span>
-          <span className="city-block cb1"></span><span className="city-block cb2"></span><span className="city-block cb3"></span><span className="city-block cb4"></span>
-          <span className="park park1"></span><span className="park park2"></span>
-          <span className="map-place place-a">{bin.area}</span>
-          <span className="map-place place-b">{selected === 4 ? "광안대교" : selected === 5 ? "죽도공원" : "구남로"}</span>
-          <span className="map-place place-c">{selected === 2 ? "마린시티" : "해변로"}</span>
-        </div>
-        {bins.map((b, i) => (
-          <button key={b.id} aria-label={b.name} onClick={() => setSelected(b.id)} className={`map-pin pin-${i + 1} ${selected === b.id ? "selected" : ""}`}>
-            <span>♲</span>
-          </button>
-        ))}
-        <span className="you-dot"><i></i>현재 위치</span>
+        <iframe key={bin.id} title={`${bin.name} 주변 지도`} src={bin.mapUrl}></iframe>
+        <span className="map-center-marker"><b>♲</b><small>{bin.name}</small></span>
+        <span className="map-source">OpenStreetMap</span>
       </section>
       <section className="bin-panel">
         <div className="drag"></div>
@@ -394,7 +378,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
               </button>
             )}
             <div className="scan-steps">
-              {["카메라 촬영", "사진 확인", "센서 인증"].map((label, i) => <span key={label} className={step >= i ? "active" : ""}><i>{step > i ? "✓" : i + 1}</i>{label}</span>)}
+              {["카메라 배출", "사진 확인", "센서 인증", "포인트 지급"].map((label, i) => <span key={label} className={step >= i ? "active" : ""}><i>{step > i ? "✓" : i + 1}</i>{label}</span>)}
             </div>
           </>
         ) : (
@@ -403,9 +387,12 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
             <p className="eyebrow">인증 완료</p>
             <h2>올바른 배출이 확인됐어요!</h2>
             <p>카메라와 투입 센서 인증을 완료해 이번 플로깅 기록을 정리했어요.</p>
+            <div className="scan-steps complete-steps">
+              {["카메라 배출", "사진 확인", "센서 인증", "포인트 지급"].map((label) => <span key={label} className="active"><i>✓</i>{label}</span>)}
+            </div>
             <div className="verification-summary">
-              <div><span>걸은 거리</span><strong>3.4 km</strong></div>
-              <div><span>활동 시간</span><strong>42분 18초</strong></div>
+              <div><span>오늘 걸은 거리</span><strong>3.4 km</strong></div>
+              <div><span>오늘 활동 시간</span><strong>42분 18초</strong></div>
               <div><span>획득 포인트</span><strong>+34 P</strong></div>
             </div>
             <small className="point-rule-note">1km당 10P 기준으로 계산됐어요.</small>
@@ -417,7 +404,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   );
 }
 
-function ProfileModal({ points, onClose }: { points: number; onClose: () => void }) {
+function ProfileModal({ points, onClose, onLogout }: { points: number; onClose: () => void; onLogout: () => void }) {
   const [showAll, setShowAll] = useState(false);
   const activities = [
     { distance: "5.4km", title: "해운대 해변 바로깅", detail: "7월 28일 · 48분 · +54P" },
@@ -466,7 +453,7 @@ function ProfileModal({ points, onClose }: { points: number; onClose: () => void
             <div><dt>활동 지역</dt><dd>부산광역시</dd></div>
           </dl>
         </section>
-        <button className="logout-button" onClick={() => { if (window.confirm("바로깅에서 로그아웃할까요?")) { onClose(); alert("로그아웃되었습니다."); } }}>로그아웃</button>
+        <button className="logout-button" onClick={() => { if (window.confirm("바로깅에서 로그아웃할까요?")) onLogout(); }}>로그아웃</button>
       </div>
     </div>
   );
@@ -625,7 +612,45 @@ function ActivityModal({
   );
 }
 
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const login = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError("이메일과 비밀번호를 입력해 주세요.");
+      return;
+    }
+    setError("");
+    onLogin();
+  };
+
+  return (
+    <div className="login-screen">
+      <div className="login-brand">
+        <span>BAROGGING · BUSAN</span>
+        <h1>바로깅</h1>
+        <p>걷고, 줍고, 부산의 바다를 바꾸다.</p>
+      </div>
+      <div className="login-wave"><i></i><b></b></div>
+      <form className="login-card" onSubmit={login}>
+        <div><p className="eyebrow">WELCOME BACK</p><h2>다시 바다를 달려볼까요?</h2></div>
+        <label>이메일<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="barogging@email.com" autoComplete="email" /></label>
+        <label>비밀번호<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="비밀번호 입력" autoComplete="current-password" /></label>
+        <div className="login-options"><label><input type="checkbox" /> 로그인 유지</label><button type="button">비밀번호 찾기</button></div>
+        {error && <p className="login-error">{error}</p>}
+        <button className="login-button" type="submit">로그인</button>
+        <button className="demo-login" type="button" onClick={onLogin}>체험 계정으로 시작하기</button>
+        <p className="signup-copy">바로깅이 처음인가요? <button type="button">회원가입</button></p>
+      </form>
+    </div>
+  );
+}
+
 export default function Home() {
+  const [loggedIn, setLoggedIn] = useState(false);
   const [tab, setTab] = useState<Tab>("plogging");
   const [points, setPoints] = useState(6840);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -661,6 +686,14 @@ export default function Home() {
     }
   };
 
+  if (!loggedIn) {
+    return (
+      <div className="site-shell">
+        <div className="phone"><LoginScreen onLogin={() => setLoggedIn(true)} /></div>
+      </div>
+    );
+  }
+
   return (
     <div className="site-shell">
       <div className="phone">
@@ -679,7 +712,16 @@ export default function Home() {
           ))}
         </nav>
         {cameraOpen && <CameraModal onClose={() => setCameraOpen(false)} onComplete={completeScan} />}
-        {profileOpen && <ProfileModal points={points} onClose={() => setProfileOpen(false)} />}
+        {profileOpen && (
+          <ProfileModal
+            points={points}
+            onClose={() => setProfileOpen(false)}
+            onLogout={() => {
+              setProfileOpen(false);
+              setLoggedIn(false);
+            }}
+          />
+        )}
         {activityMode && (
           <ActivityModal
             mode={activityMode}
