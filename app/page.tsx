@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Tab = "plogging" | "records" | "map" | "rewards";
 type Mode = "solo" | "group";
@@ -29,7 +29,7 @@ function Header({ points }: { points: number }) {
     <header className="topbar">
       <div className="brand">
         <span className="brand-mark">〰</span>
-        <span>파도줍</span>
+        <span>바로깅</span>
       </div>
       <button className="point-pill" aria-label="내 포인트">
         <span>◆</span> {points.toLocaleString()} P
@@ -145,7 +145,7 @@ function RecordsScreen() {
   );
 }
 
-function MapScreen({ onScan }: { onScan: () => void }) {
+function MapScreen({ onCamera }: { onCamera: () => void }) {
   const [selected, setSelected] = useState(1);
   const bins = [
     { id: 1, name: "해운대 중앙광장", distance: "120m", fill: "32%", status: "여유" },
@@ -179,7 +179,7 @@ function MapScreen({ onScan }: { onScan: () => void }) {
         </div>
         <div className="bin-meter"><span style={{ width: bin.fill }}></span></div>
         <div className="bin-meta"><span>수거함 용량 {bin.fill}</span><span>최근 확인 2분 전</span></div>
-        <button className="primary-button" onClick={onScan}><span>▣</span> QR 스캔하고 투입구 열기</button>
+        <button className="primary-button" onClick={onCamera}><span>◉</span> 카메라로 배출 인증하기</button>
       </section>
     </main>
   );
@@ -223,24 +223,81 @@ function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => v
   );
 }
 
-function ScanModal({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
+function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete: () => void }) {
   const [step, setStep] = useState(0);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  };
+
+  const closeCamera = () => {
+    stopCamera();
+    onClose();
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraOn(true);
+      setCameraError("");
+    } catch {
+      setCameraError("카메라 권한을 허용하면 배출 모습을 인증할 수 있어요.");
+    }
+  };
+
+  const captureWaste = () => {
+    stopCamera();
+    setCameraOn(false);
+    setStep(1);
+  };
+
   useEffect(() => {
-    const timers = [900, 1900, 3000].map((delay, index) => setTimeout(() => setStep(index + 1), delay));
+    if (step !== 1) return;
+    const timers = [
+      setTimeout(() => setStep(2), 900),
+      setTimeout(() => setStep(3), 2100),
+    ];
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [step]);
+
+  useEffect(() => () => stopCamera(), []);
+
   return (
     <div className="modal-backdrop">
       <div className="scan-modal">
         {step < 3 ? (
           <>
-            <button className="modal-close" onClick={onClose}>×</button>
-            <span className={`scanner ${step > 0 ? "opened" : ""}`}><i></i><b>▣</b></span>
+            <button className="modal-close" onClick={closeCamera}>×</button>
+            <div className={`camera-view ${cameraOn ? "live" : ""} ${step > 0 ? "captured" : ""}`}>
+              <video ref={videoRef} playsInline muted aria-label="배출 인증 카메라 화면" />
+              {!cameraOn && step === 0 && <span className="camera-placeholder"><b>◉</b>배출 모습을 촬영해 주세요</span>}
+              {step > 0 && <span className="capture-check">✓</span>}
+              {cameraOn && <i className="focus-frame"></i>}
+            </div>
             <p className="eyebrow">SMART BIN #H12</p>
-            <h2>{step === 0 ? "QR 코드를 확인하고 있어요" : step === 1 ? "투입구가 열렸어요!" : "무게와 투입을 확인 중이에요"}</h2>
-            <p>{step === 1 ? "쓰레기를 넣어주세요." : step === 2 ? "센서가 1.8kg의 쓰레기를 감지했어요." : "카메라를 QR 코드에 맞춰주세요."}</p>
+            <h2>{step === 0 ? "카메라로 배출을 인증해요" : step === 1 ? "배출 사진을 확인하고 있어요" : "센서와 무게를 확인 중이에요"}</h2>
+            <p>{step === 0 ? "쓰레기를 수거함에 넣는 모습이 잘 보이게 촬영해 주세요." : step === 1 ? "올바른 배출 모습이 선명하게 촬영됐어요." : "센서가 1.8kg의 쓰레기를 감지했어요."}</p>
+            {cameraError && <p className="camera-error">{cameraError}</p>}
+            {step === 0 && (
+              <button className="camera-button" onClick={cameraOn ? captureWaste : startCamera}>
+                {cameraOn ? "● 촬영하고 인증하기" : "◉ 카메라 켜기"}
+              </button>
+            )}
             <div className="scan-steps">
-              {["QR 확인", "투입구 개방", "센서 인증"].map((label, i) => <span key={label} className={step >= i ? "active" : ""}><i>{step > i ? "✓" : i + 1}</i>{label}</span>)}
+              {["카메라 촬영", "사진 확인", "센서 인증"].map((label, i) => <span key={label} className={step >= i ? "active" : ""}><i>{step > i ? "✓" : i + 1}</i>{label}</span>)}
             </div>
           </>
         ) : (
@@ -258,17 +315,62 @@ function ScanModal({ onClose, onComplete }: { onClose: () => void; onComplete: (
   );
 }
 
-function ActivityModal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
+function ActivityModal({
+  mode,
+  onClose,
+  joined,
+  participantCount,
+  onToggleJoin,
+}: {
+  mode: Mode;
+  onClose: () => void;
+  joined: boolean;
+  participantCount: number;
+  onToggleJoin: () => void;
+}) {
+  if (mode === "group") {
+    return (
+      <div className="modal-backdrop">
+        <div className="activity-modal group-modal">
+          <button className="modal-close" onClick={onClose}>×</button>
+          <span className="activity-badge">같이 만드는 변화</span>
+          <h2>함께 플로깅</h2>
+
+          <article className="open-group">
+            <div className="open-group-head">
+              <div><span>모집 중</span><h3>광안리 아침 바로깅</h3></div>
+              <strong>{participantCount}<small> / 10명</small></strong>
+            </div>
+            <p>⌖ 광안리 만남의 광장 · 7월 30일 오전 8:00</p>
+            <button className={joined ? "cancel-join" : "join-button"} onClick={onToggleJoin}>
+              {joined ? "참여 취소" : "참여하기"}
+            </button>
+          </article>
+
+          <div className="form-divider"><span>새 그룹 만들기</span></div>
+          <div className="group-form">
+            <label>그룹 이름<input placeholder="예: 주말 바다 지킴이" aria-label="그룹 이름" /></label>
+            <label>시작 지점<input placeholder="예: 해운대 중앙광장" aria-label="시작 지점" /></label>
+            <div>
+              <label>만나는 시간<input type="datetime-local" aria-label="만나는 시간" /></label>
+              <label>인원 수<input type="number" min="2" max="50" defaultValue="10" aria-label="인원 수" /></label>
+            </div>
+          </div>
+          <button className="primary-button" onClick={() => { alert("새 플로깅 그룹이 만들어졌어요!"); onClose(); }}>그룹 만들기</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-backdrop">
       <div className="activity-modal">
         <button className="modal-close" onClick={onClose}>×</button>
-        <span className="activity-badge">{mode === "solo" ? "나만의 페이스" : "같이 만드는 변화"}</span>
-        <h2>{mode === "solo" ? "혼자 플로깅" : "함께 플로깅"}</h2>
-        <p>{mode === "solo" ? "현재 위치에서 바로 기록을 시작할까요?" : "새 그룹을 만들거나 초대 코드로 참여해보세요."}</p>
-        {mode === "group" && <input className="group-input" placeholder="그룹 이름을 입력하세요" aria-label="그룹 이름" />}
+        <span className="activity-badge">나만의 페이스</span>
+        <h2>혼자 플로깅</h2>
+        <p>현재 위치에서 바로 기록을 시작할까요?</p>
         <div className="live-preview"><span><i>거리</i><b>0.00 km</b></span><span><i>시간</i><b>00:00</b></span><span><i>걸음</i><b>0</b></span></div>
-        <button className="primary-button" onClick={() => { alert(mode === "solo" ? "플로깅 기록을 시작했어요!" : "그룹이 만들어졌어요!"); onClose(); }}>{mode === "solo" ? "기록 시작하기" : "그룹 만들기"}</button>
+        <button className="primary-button" onClick={() => { alert("플로깅 기록을 시작했어요!"); onClose(); }}>기록 시작하기</button>
       </div>
     </div>
   );
@@ -277,13 +379,22 @@ function ActivityModal({ mode, onClose }: { mode: Mode; onClose: () => void }) {
 export default function Home() {
   const [tab, setTab] = useState<Tab>("plogging");
   const [points, setPoints] = useState(6840);
-  const [scanOpen, setScanOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [activityMode, setActivityMode] = useState<Mode | null>(null);
+  const [joined, setJoined] = useState(false);
+  const [participantCount, setParticipantCount] = useState(7);
 
   const completeScan = () => {
     setPoints((p) => p + 180);
-    setScanOpen(false);
+    setCameraOpen(false);
     setTab("rewards");
+  };
+
+  const toggleJoin = () => {
+    setJoined((current) => {
+      setParticipantCount((count) => current ? Math.max(0, count - 1) : count + 1);
+      return !current;
+    });
   };
 
   return (
@@ -294,7 +405,7 @@ export default function Home() {
         <div className="content">
           {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
           {tab === "records" && <RecordsScreen />}
-          {tab === "map" && <MapScreen onScan={() => setScanOpen(true)} />}
+          {tab === "map" && <MapScreen onCamera={() => setCameraOpen(true)} />}
           {tab === "rewards" && <RewardsScreen points={points} onRedeem={() => alert("교환 신청이 완료됐어요!")} />}
         </div>
         <nav className="bottom-nav" aria-label="주요 메뉴">
@@ -304,8 +415,16 @@ export default function Home() {
             </button>
           ))}
         </nav>
-        {scanOpen && <ScanModal onClose={() => setScanOpen(false)} onComplete={completeScan} />}
-        {activityMode && <ActivityModal mode={activityMode} onClose={() => setActivityMode(null)} />}
+        {cameraOpen && <CameraModal onClose={() => setCameraOpen(false)} onComplete={completeScan} />}
+        {activityMode && (
+          <ActivityModal
+            mode={activityMode}
+            onClose={() => setActivityMode(null)}
+            joined={joined}
+            participantCount={participantCount}
+            onToggleJoin={toggleJoin}
+          />
+        )}
       </div>
     </div>
   );
