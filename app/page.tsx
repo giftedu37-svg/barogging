@@ -112,11 +112,12 @@ function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
   );
 }
 
-function RecordsScreen() {
+function RecordsScreen({ nickname }: { nickname: string }) {
   const [ranking, setRanking] = useState<Mode>("group");
   const [metric, setMetric] = useState<RankMetric>("distance");
   const [routes, setRoutes] = useState(communityRoutes);
   const [courseOpen, setCourseOpen] = useState(false);
+  const [detailRoute, setDetailRoute] = useState<(typeof communityRoutes)[number] | null>(null);
   const ranks = ranking === "group" ? groupRank : soloRank;
   return (
     <main className="screen">
@@ -170,7 +171,11 @@ function RecordsScreen() {
                 <div className="route-author"><span>{route.avatar}</span><strong>{route.author}</strong><small>{route.area}</small></div>
                 <h3>{route.title}</h3>
                 <p>{route.distance} · 약 {route.time} · 수거함 {route.bins}개</p>
-                <div><span>♡ {route.likes}</span><button onClick={() => alert(`${route.title} 코스 링크를 복사했어요!`)}>공유 ↗</button></div>
+                <div className="route-actions">
+                  <span>♡ {route.likes}</span>
+                  <button onClick={() => setDetailRoute(route)}>자세히</button>
+                  <button onClick={() => alert(`${route.title} 코스 링크를 복사했어요!`)}>공유 ↗</button>
+                </div>
               </div>
             </article>
           ))}
@@ -180,11 +185,12 @@ function RecordsScreen() {
         <CourseUploadModal
           onClose={() => setCourseOpen(false)}
           onCreate={(route) => {
-            setRoutes((current) => [{ ...route, id: Date.now(), author: "윤바다", avatar: "윤", likes: 0, tone: "mint", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.02%2C35.07%2C129.18%2C35.22&layer=mapnik&marker=35.1379%2C129.0751" }, ...current]);
+            setRoutes((current) => [{ ...route, id: Date.now(), author: nickname, avatar: nickname.slice(0, 1), likes: 0, tone: "mint", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.02%2C35.07%2C129.18%2C35.22&layer=mapnik&marker=35.1379%2C129.0751" }, ...current]);
             setCourseOpen(false);
           }}
         />
       )}
+      {detailRoute && <CourseDetailModal route={detailRoute} onClose={() => setDetailRoute(null)} />}
     </main>
   );
 }
@@ -251,15 +257,25 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
   );
 }
 
-function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => void }) {
+function RewardsScreen({
+  points,
+  onRedeem,
+  onAttendance,
+}: {
+  points: number;
+  onRedeem: (name: string, price: number) => void;
+  onAttendance: (day: number) => void;
+}) {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  const today = 28;
   const rewards = [
-    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: "3,000 P" },
-    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: "5,000 P" },
-    { icon: "▰", className: "transit", name: "대중교통 충전권", price: "2,000 P" },
-    { icon: "◇", className: "store", name: "편의점 상품권", price: "4,000 P" },
-    { icon: "♥", className: "donate", name: "해양 보호 기부", price: "1,000 P" },
-    { icon: "⌂", className: "local", name: "지역사랑 상품권", price: "6,000 P" },
+    { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 3000 },
+    { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: 5000 },
+    { icon: "▰", className: "transit", name: "대중교통 충전권", price: 2000 },
+    { icon: "◇", className: "store", name: "편의점 상품권", price: 4000 },
+    { icon: "♥", className: "donate", name: "해양 보호 기부", price: 1000 },
+    { icon: "⌂", className: "local", name: "지역사랑 상품권", price: 6000 },
   ];
   return (
     <main className="screen rewards-screen">
@@ -275,13 +291,26 @@ function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => v
           <div><span className="streak-icon">♨</span><h2>7일 연속 출석</h2></div>
           <strong>7월 <button aria-label="월 변경">⌄</button></strong>
         </div>
-        <p>이번 달 매일 출석하면 <b>30P 보너스!</b></p>
+        <p>날짜를 눌러 출석하면 <b>매일 1P</b>를 바로 받아요.</p>
         <div className="calendar-labels">{["월", "화", "수", "목", "금", "토", "일"].map(d => <span key={d}>{d}</span>)}</div>
         <div className="calendar">
-          {days.map((day) => <span key={day} className={day <= 12 ? "checked" : day === 28 ? "today" : ""}>{day <= 12 ? "✓" : day}</span>)}
+          <span className="calendar-empty"></span><span className="calendar-empty"></span>
+          {days.map((day) => (
+            <button
+              key={day}
+              className={`${claimedDays.includes(day) ? "checked" : ""} ${day === today ? "today" : ""}`}
+              disabled={day > today || claimedDays.includes(day)}
+              onClick={() => {
+                setClaimedDays((current) => [...current, day]);
+                onAttendance(day);
+              }}
+            >
+              {claimedDays.includes(day) ? "✓" : day}
+            </button>
+          ))}
         </div>
-        <div className="attendance-progress"><span style={{ width: "39%" }}></span></div>
-        <small>12 / 31일 출석</small>
+        <div className="attendance-progress"><span style={{ width: `${(claimedDays.length / 31) * 100}%` }}></span></div>
+        <small>{claimedDays.length} / 31일 출석 · 하루 1P</small>
       </section>
       <section className="reward-shop">
         <div className="section-head"><h2>포인트로 바꿔요</h2><button className="text-button">이용내역</button></div>
@@ -289,8 +318,8 @@ function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => v
           {rewards.map((reward) => (
             <article key={reward.name}>
               <span className={`coupon-icon ${reward.className}`}>{reward.icon}</span>
-              <p>{reward.name}</p><strong>{reward.price}</strong>
-              <button onClick={onRedeem}>교환하기</button>
+              <p>{reward.name}</p><strong>{reward.price.toLocaleString()} P</strong>
+              <button onClick={() => onRedeem(reward.name, reward.price)}>교환하기</button>
             </article>
           ))}
         </div>
@@ -298,7 +327,7 @@ function RewardsScreen({ points, onRedeem }: { points: number; onRedeem: () => v
       <section className="point-history">
         <div><span className="history-icon">⌁</span><p><strong>플로깅 5.4km 완료</strong><small>오늘 · 해운대 해변 코스</small></p><b>+54 P</b></div>
         <div><span className="history-icon">⌁</span><p><strong>플로깅 3.2km 완료</strong><small>어제 · 동백섬 코스</small></p><b>+32 P</b></div>
-        <div><span className="history-icon">♨</span><p><strong>6월 한 달 출석 완료</strong><small>6월 30일 · 출석 보너스</small></p><b>+30 P</b></div>
+        <div><span className="history-icon">♨</span><p><strong>7월 12일 출석 완료</strong><small>7월 12일 · 매일 출석</small></p><b>+1 P</b></div>
       </section>
     </main>
   );
@@ -385,8 +414,8 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
           <div className="success-state">
             <span className="success-ring">✓</span>
             <p className="eyebrow">인증 완료</p>
-            <h2>올바른 배출이 확인됐어요!</h2>
-            <p>카메라와 투입 센서 인증을 완료해 이번 플로깅 기록을 정리했어요.</p>
+            <h2>사진 인증 완료!</h2>
+            <p>센서 확인까지 끝났어요. 오늘 플로깅 기록에 따라 포인트가 지급됩니다.</p>
             <div className="scan-steps complete-steps">
               {["카메라 배출", "사진 확인", "센서 인증", "포인트 지급"].map((label) => <span key={label} className="active"><i>✓</i>{label}</span>)}
             </div>
@@ -396,7 +425,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
               <div><span>획득 포인트</span><strong>+34 P</strong></div>
             </div>
             <small className="point-rule-note">1km당 10P 기준으로 계산됐어요.</small>
-            <button className="primary-button" onClick={() => onComplete(34)}>34P 적립하고 완료</button>
+            <button className="primary-button" onClick={() => onComplete(34)}>34P 지급받기</button>
           </div>
         )}
       </div>
@@ -404,7 +433,7 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   );
 }
 
-function ProfileModal({ points, onClose, onLogout }: { points: number; onClose: () => void; onLogout: () => void }) {
+function ProfileModal({ points, nickname, onClose, onLogout }: { points: number; nickname: string; onClose: () => void; onLogout: () => void }) {
   const [showAll, setShowAll] = useState(false);
   const activities = [
     { distance: "5.4km", title: "해운대 해변 바로깅", detail: "7월 28일 · 48분 · +54P" },
@@ -423,8 +452,8 @@ function ProfileModal({ points, onClose, onLogout }: { points: number; onClose: 
         <button className="modal-close" onClick={onClose}>×</button>
         <p className="profile-title">내 프로필</p>
         <div className="account-profile">
-          <span>윤</span>
-          <div><p>바다를 달리는 중</p><h2>윤바다 님</h2><small>부산 바로거 · 2026년 3월부터</small></div>
+          <span>{nickname.slice(0, 1)}</span>
+          <div><p>바다를 달리는 중</p><h2>{nickname} 님</h2><small>부산 바로거 · 2026년 3월부터</small></div>
         </div>
         <div className="account-stats">
           <div><span>누적 거리</span><strong>128.6 km</strong></div>
@@ -447,7 +476,7 @@ function ProfileModal({ points, onClose, onLogout }: { points: number; onClose: 
         <section className="account-section privacy-section">
           <div className="account-section-title"><h3>개인정보</h3><button>수정</button></div>
           <dl>
-            <div><dt>이름</dt><dd>윤바다</dd></div>
+            <div><dt>닉네임</dt><dd>{nickname}</dd></div>
             <div><dt>휴대폰</dt><dd>010-****-2847</dd></div>
             <div><dt>이메일</dt><dd>bada***@email.com</dd></div>
             <div><dt>활동 지역</dt><dd>부산광역시</dd></div>
@@ -513,6 +542,33 @@ function CourseUploadModal({
   );
 }
 
+function CourseDetailModal({ route, onClose }: { route: (typeof communityRoutes)[number]; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop">
+      <div className="course-detail-modal">
+        <button className="modal-close" onClick={onClose}>×</button>
+        <div className="detail-map"><iframe title={`${route.title} 상세 지도`} src={route.mapUrl}></iframe></div>
+        <div className="detail-author"><span>{route.avatar}</span><div><strong>{route.author}님의 추천 코스</strong><small>{route.area}</small></div></div>
+        <h2>{route.title}</h2>
+        <div className="detail-stats">
+          <div><span>거리</span><strong>{route.distance}</strong></div>
+          <div><span>예상 시간</span><strong>{route.time}</strong></div>
+          <div><span>스마트 수거함</span><strong>{route.bins}개</strong></div>
+        </div>
+        <section className="course-guide">
+          <h3>코스 안내</h3>
+          <ol>
+            <li><i>1</i><div><strong>{route.area.split(" · ")[1]} 시작 지점</strong><small>해변 입구에서 플로깅을 시작해요.</small></div></li>
+            <li><i>2</i><div><strong>해안 산책로 구간</strong><small>안전한 보행로를 따라 쓰레기를 수거해요.</small></div></li>
+            <li><i>3</i><div><strong>스마트 수거함 도착</strong><small>카메라와 센서로 배출을 인증해요.</small></div></li>
+          </ol>
+        </section>
+        <button className="primary-button" onClick={() => { alert(`${route.title} 코스를 내 플로깅에 저장했어요!`); onClose(); }}>이 코스로 시작하기</button>
+      </div>
+    </div>
+  );
+}
+
 function ActivityModal({
   mode,
   onClose,
@@ -532,6 +588,18 @@ function ActivityModal({
   const [groupPlace, setGroupPlace] = useState("");
   const [groupTime, setGroupTime] = useState("");
   const [groupMax, setGroupMax] = useState(10);
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!recording) return;
+    const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [recording]);
+
+  const measuredDistance = (elapsed * 0.0032).toFixed(2);
+  const measuredSteps = elapsed * 2;
+  const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
 
   const createGroup = () => {
     if (!groupName.trim() || !groupPlace.trim() || !groupTime) {
@@ -604,27 +672,42 @@ function ActivityModal({
         <span className="activity-badge">나만의 페이스</span>
         <h2>혼자 플로깅</h2>
         <p>현재 위치에서 바로 기록을 시작할까요?</p>
-        <div className="live-preview"><span><i>거리</i><b>0.00 km</b></span><span><i>시간</i><b>00:00</b></span><span><i>걸음</i><b>0</b></span></div>
+        {recording && <span className="recording-live"><i></i>측정 중</span>}
+        <div className={`live-preview ${recording ? "is-recording" : ""}`}><span><i>거리</i><b>{measuredDistance} km</b></span><span><i>시간</i><b>{measuredTime}</b></span><span><i>걸음</i><b>{measuredSteps.toLocaleString()}</b></span></div>
         <p className="distance-rule">달린 거리 × 10P · 1km부터 적립</p>
-        <button className="primary-button" onClick={() => { alert("플로깅 기록을 시작했어요!"); onClose(); }}>기록 시작하기</button>
+        <button
+          className={`primary-button ${recording ? "stop-recording" : ""}`}
+          onClick={() => {
+            if (!recording) {
+              setRecording(true);
+            } else {
+              setRecording(false);
+              alert(`측정 종료! ${measuredDistance}km · ${measuredTime} 기록을 저장했어요.`);
+              onClose();
+            }
+          }}
+        >
+          {recording ? "측정 종료" : "측정 시작하기"}
+        </button>
       </div>
     </div>
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin }: { onLogin: (nickname: string) => void }) {
+  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const login = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      setError("이메일과 비밀번호를 입력해 주세요.");
+    if (!nickname.trim() || !email.trim() || !password.trim()) {
+      setError("닉네임, 이메일과 비밀번호를 모두 입력해 주세요.");
       return;
     }
     setError("");
-    onLogin();
+    onLogin(nickname.trim());
   };
 
   return (
@@ -637,12 +720,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       <div className="login-wave"><i></i><b></b></div>
       <form className="login-card" onSubmit={login}>
         <div><p className="eyebrow">WELCOME BACK</p><h2>다시 바다를 달려볼까요?</h2></div>
+        <label>닉네임<input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="앱에서 사용할 닉네임" maxLength={12} /></label>
         <label>이메일<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="barogging@email.com" autoComplete="email" /></label>
         <label>비밀번호<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="비밀번호 입력" autoComplete="current-password" /></label>
         <div className="login-options"><label><input type="checkbox" /> 로그인 유지</label><button type="button">비밀번호 찾기</button></div>
         {error && <p className="login-error">{error}</p>}
         <button className="login-button" type="submit">로그인</button>
-        <button className="demo-login" type="button" onClick={onLogin}>체험 계정으로 시작하기</button>
+        <button className="demo-login" type="button" onClick={() => onLogin(nickname.trim() || "바다러너")}>체험 계정으로 시작하기</button>
         <p className="signup-copy">바로깅이 처음인가요? <button type="button">회원가입</button></p>
       </form>
     </div>
@@ -651,6 +735,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [nickname, setNickname] = useState("바다러너");
   const [tab, setTab] = useState<Tab>("plogging");
   const [points, setPoints] = useState(6840);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -689,7 +774,7 @@ export default function Home() {
   if (!loggedIn) {
     return (
       <div className="site-shell">
-        <div className="phone"><LoginScreen onLogin={() => setLoggedIn(true)} /></div>
+        <div className="phone"><LoginScreen onLogin={(name) => { setNickname(name); setLoggedIn(true); }} /></div>
       </div>
     );
   }
@@ -700,9 +785,25 @@ export default function Home() {
         <Header points={points} onAccount={() => setProfileOpen(true)} />
         <div className="content">
           {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
-          {tab === "records" && <RecordsScreen />}
+          {tab === "records" && <RecordsScreen nickname={nickname} />}
           {tab === "map" && <MapScreen onCamera={() => setCameraOpen(true)} />}
-          {tab === "rewards" && <RewardsScreen points={points} onRedeem={() => alert("교환 신청이 완료됐어요!")} />}
+          {tab === "rewards" && (
+            <RewardsScreen
+              points={points}
+              onRedeem={(name, price) => {
+                if (points < price) {
+                  alert("포인트가 부족해요.");
+                  return;
+                }
+                setPoints((current) => current - price);
+                alert(`교환 완료! ${name}으로 ${price.toLocaleString()}P를 사용했어요.`);
+              }}
+              onAttendance={(day) => {
+                setPoints((current) => current + 1);
+                alert(`7월 ${day}일 출석 완료! 1P가 지급됐어요.`);
+              }}
+            />
+          )}
         </div>
         <nav className="bottom-nav" aria-label="주요 메뉴">
           {navItems.map((item) => (
@@ -715,6 +816,7 @@ export default function Home() {
         {profileOpen && (
           <ProfileModal
             points={points}
+            nickname={nickname}
             onClose={() => setProfileOpen(false)}
             onLogout={() => {
               setProfileOpen(false);
