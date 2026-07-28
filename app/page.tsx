@@ -115,6 +115,8 @@ function PloggingScreen({ onStart }: { onStart: (mode: Mode) => void }) {
 function RecordsScreen() {
   const [ranking, setRanking] = useState<Mode>("group");
   const [metric, setMetric] = useState<RankMetric>("distance");
+  const [routes, setRoutes] = useState(communityRoutes);
+  const [courseOpen, setCourseOpen] = useState(false);
   const ranks = ranking === "group" ? groupRank : soloRank;
   return (
     <main className="screen">
@@ -154,14 +156,17 @@ function RecordsScreen() {
       </section>
 
       <section className="section-block route-section">
-        <div className="section-head"><h2>부산 사용자 추천 코스</h2><button className="text-button">코스 올리기</button></div>
+        <div className="section-head"><h2>부산 사용자 추천 코스</h2><button className="text-button course-upload-button" onClick={() => setCourseOpen(true)}>+ 코스 등록</button></div>
         <p className="route-subtitle">부산에서 바로깅 중인 사람들이 직접 공유했어요.</p>
         <div className="route-feed">
-          {communityRoutes.map((route, index) => (
+          {routes.map((route, index) => (
             <article className="community-route" key={route.id}>
               <div className={`route-map ${route.tone}`}>
+                <span className="mini-road mr1"></span><span className="mini-road mr2"></span>
+                <span className="mini-block mb1"></span><span className="mini-block mb2"></span>
                 <span className="route-line">⌁⌁⌁⌁</span>
                 <i className="pin p1">●</i><i className="pin p2">◆</i><i className="pin p3">●</i>
+                <small className="mini-map-label">{route.area.split(" · ")[1]}</small>
                 {index === 0 && <b>인기</b>}
               </div>
               <div className="route-info">
@@ -174,6 +179,15 @@ function RecordsScreen() {
           ))}
         </div>
       </section>
+      {courseOpen && (
+        <CourseUploadModal
+          onClose={() => setCourseOpen(false)}
+          onCreate={(route) => {
+            setRoutes((current) => [{ ...route, id: Date.now(), author: "윤바다", avatar: "윤", likes: 0, tone: "mint" }, ...current]);
+            setCourseOpen(false);
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -182,11 +196,11 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
   const [selected, setSelected] = useState(1);
   const [query, setQuery] = useState("");
   const bins = [
-    { id: 1, name: "해운대 중앙광장", distance: "120m", fill: "32%", status: "여유" },
-    { id: 2, name: "동백섬 입구", distance: "380m", fill: "71%", status: "보통" },
-    { id: 3, name: "미포 산책로", distance: "620m", fill: "18%", status: "여유" },
-    { id: 4, name: "광안리 만남의 광장", distance: "1.2km", fill: "45%", status: "여유" },
-    { id: 5, name: "송정해수욕장 입구", distance: "2.8km", fill: "63%", status: "보통" },
+    { id: 1, name: "해운대 중앙광장", distance: "120m", fill: "32%", status: "여유", area: "해운대해수욕장" },
+    { id: 2, name: "동백섬 입구", distance: "380m", fill: "71%", status: "보통", area: "동백섬 · 마린시티" },
+    { id: 3, name: "미포 산책로", distance: "620m", fill: "18%", status: "여유", area: "미포 · 달맞이길" },
+    { id: 4, name: "광안리 만남의 광장", distance: "1.2km", fill: "45%", status: "여유", area: "광안리해수욕장" },
+    { id: 5, name: "송정해수욕장 입구", distance: "2.8km", fill: "63%", status: "보통", area: "송정해수욕장" },
   ];
   const bin = bins.find((b) => b.id === selected)!;
   const searchResults = query.trim()
@@ -221,11 +235,18 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
           </div>
         )}
       </div>
-      <section className="map-canvas">
-        <div className="ocean-label">HAEUNDAE<br /><small>BEACH</small></div>
-        <span className="road r1"></span><span className="road r2"></span><span className="road r3"></span>
-        <span className="park park1"></span><span className="park park2"></span>
-        {bins.slice(0, 3).map((b, i) => (
+      <section className={`map-canvas map-view-${selected}`}>
+        <div className="map-moving-layer">
+          <div className="ocean-label">{selected === 4 ? "GWANGALLI" : selected === 5 ? "SONGJEONG" : "HAEUNDAE"}<br /><small>BEACH · BUSAN</small></div>
+          <span className="road r1"></span><span className="road r2"></span><span className="road r3"></span>
+          <span className="road r4"></span><span className="road r5"></span>
+          <span className="city-block cb1"></span><span className="city-block cb2"></span><span className="city-block cb3"></span><span className="city-block cb4"></span>
+          <span className="park park1"></span><span className="park park2"></span>
+          <span className="map-place place-a">{bin.area}</span>
+          <span className="map-place place-b">{selected === 4 ? "광안대교" : selected === 5 ? "죽도공원" : "구남로"}</span>
+          <span className="map-place place-c">{selected === 2 ? "마린시티" : "해변로"}</span>
+        </div>
+        {bins.map((b, i) => (
           <button key={b.id} aria-label={b.name} onClick={() => setSelected(b.id)} className={`map-pin pin-${i + 1} ${selected === b.id ? "selected" : ""}`}>
             <span>♲</span>
           </button>
@@ -424,6 +445,61 @@ function AccountModal({ points, onClose }: { points: number; onClose: () => void
             <div><dt>활동 지역</dt><dd>부산광역시</dd></div>
           </dl>
         </section>
+        <button className="logout-button" onClick={() => { if (window.confirm("바로깅에서 로그아웃할까요?")) { onClose(); alert("로그아웃되었습니다."); } }}>로그아웃</button>
+      </div>
+    </div>
+  );
+}
+
+function CourseUploadModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (route: { title: string; area: string; distance: string; time: string; bins: number }) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [area, setArea] = useState("");
+  const [distance, setDistance] = useState("");
+  const [time, setTime] = useState("");
+  const [bins, setBins] = useState(2);
+
+  const submitCourse = () => {
+    if (!title.trim() || !area.trim() || !distance.trim() || !time.trim()) {
+      alert("코스 이름, 부산 지역, 거리와 예상 시간을 모두 입력해 주세요.");
+      return;
+    }
+    onCreate({
+      title: title.trim(),
+      area: `부산 · ${area.trim()}`,
+      distance: distance.includes("km") ? distance : `${distance}km`,
+      time: time.trim().replace(/^약\s*/, ""),
+      bins,
+    });
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="course-modal">
+        <button className="modal-close" onClick={onClose}>×</button>
+        <p className="eyebrow">BUSAN COMMUNITY COURSE</p>
+        <h2>추천 코스 등록</h2>
+        <p>직접 걸어본 부산 플로깅 코스를 이웃에게 알려주세요.</p>
+        <div className="course-map-preview">
+          <span className="preview-road pr1"></span><span className="preview-road pr2"></span><span className="preview-road pr3"></span>
+          <span className="preview-route">● · · · ◆ · · ●</span>
+          <small>BUSAN</small>
+        </div>
+        <div className="course-form">
+          <label>코스 이름<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 영도 바다 마을 코스" /></label>
+          <label>부산 지역<input value={area} onChange={(e) => setArea(e.target.value)} placeholder="예: 영도구 · 흰여울문화마을" /></label>
+          <div>
+            <label>거리(km)<input value={distance} onChange={(e) => setDistance(e.target.value)} inputMode="decimal" placeholder="4.2" /></label>
+            <label>예상 시간<input value={time} onChange={(e) => setTime(e.target.value)} placeholder="약 55분" /></label>
+            <label>수거함 수<input value={bins} onChange={(e) => setBins(Number(e.target.value))} type="number" min="0" max="20" /></label>
+          </div>
+        </div>
+        <button className="primary-button" onClick={submitCourse}>부산 추천 코스로 등록하기</button>
       </div>
     </div>
   );
@@ -566,7 +642,6 @@ export default function Home() {
   return (
     <div className="site-shell">
       <div className="phone">
-        <div className="statusbar"><span>9:41</span><div><i></i><i></i><b>▰</b></div></div>
         <Header points={points} onAccount={() => setAccountOpen(true)} />
         <div className="content">
           {tab === "plogging" && <PloggingScreen onStart={setActivityMode} />}
