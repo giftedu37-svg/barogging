@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Jua&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -17,7 +18,7 @@ html, body { margin: 0; min-height: 100%; }
 body {
   background: #d6ebe5;
   color: var(--ink);
-  font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif;
+  font-family: "Jua", "Arial Rounded MT Bold", "Apple SD Gothic Neo", sans-serif;
 }
 button, input { font: inherit; }
 button { color: inherit; }
@@ -416,6 +417,13 @@ button { color: inherit; }
 .privacy-section dl { margin: 0; border: 1px solid #e3e7df; border-radius: 13px; overflow: hidden; }
 .privacy-section dl > div { display: flex; justify-content: space-between; padding: 9px 11px; border-bottom: 1px solid #eaede7; font-size: 8px; }
 .privacy-section dl > div:last-child { border: 0; }.privacy-section dt { color: #87938f; }.privacy-section dd { margin: 0; font-weight: 700; }
+.privacy-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 11px; border: 1px solid #e3e7df; border-radius: 13px; background: #fbfcf8; }
+.privacy-form label { color: #75837f; font-size: 8px; }
+.privacy-form input { width: 100%; margin-top: 4px; padding: 8px 9px; border: 1px solid #dce3dc; border-radius: 9px; background: white; color: var(--ink); outline: none; font-size: 8px; }
+.privacy-form input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(79,158,125,.12); }
+.privacy-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
+.privacy-form-actions button { border: 1px solid #d6ded8; border-radius: 9px; padding: 7px 11px; background: white; color: #637772; font-size: 8px; cursor: pointer; }
+.privacy-form-actions button[type="submit"] { border-color: var(--deep); background: var(--deep); color: white; }
 .logout-button { width: 100%; margin-top: 17px; border: 1px solid #edcfc8; color: #c55e4c; background: #fff7f4; border-radius: 11px; padding: 9px; font-size: 9px; font-weight: 800; cursor: pointer; }
 .course-modal { width: 100%; background: var(--paper); border-radius: 26px 26px 0 0; padding: 28px 22px 25px; text-align: left; position: relative; animation: slideUp .35s ease; }
 .course-modal h2 { margin: 4px 0 6px; font-size: 20px; letter-spacing: -.05em; }.course-modal > p:not(.eyebrow) { margin: 0 0 13px; color: #7d8a87; font-size: 9px; }

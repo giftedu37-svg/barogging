@@ -18,6 +18,12 @@ type PurchaseRecord = {
   price: number;
   purchasedAt: string;
 };
+type ProfileData = {
+  nickname: string;
+  phone: string;
+  email: string;
+  region: string;
+};
 type GroupData = {
   id: number;
   name: string;
@@ -507,8 +513,25 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   );
 }
 
-function ProfileModal({ points, nickname, activityRecords, onClose, onLogout }: { points: number; nickname: string; activityRecords: ActivityRecord[]; onClose: () => void; onLogout: () => void }) {
+function ProfileModal({
+  points,
+  profile,
+  activityRecords,
+  onSaveProfile,
+  onClose,
+  onLogout,
+}: {
+  points: number;
+  profile: ProfileData;
+  activityRecords: ActivityRecord[];
+  onSaveProfile: (profile: ProfileData) => void;
+  onClose: () => void;
+  onLogout: () => void;
+}) {
   const [showAll, setShowAll] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(profile);
+  const nickname = profile.nickname;
   const recordedActivities = activityRecords.map((record) => ({
     distance: `${record.distance.toFixed(2)}km`,
     title: "새로 저장한 바로깅",
@@ -554,13 +577,42 @@ function ProfileModal({ points, nickname, activityRecords, onClose, onLogout }: 
         </section>
 
         <section className="account-section privacy-section">
-          <div className="account-section-title"><h3>개인정보</h3><button>수정</button></div>
-          <dl>
-            <div><dt>닉네임</dt><dd>{nickname}</dd></div>
-            <div><dt>휴대폰</dt><dd>010-****-2847</dd></div>
-            <div><dt>이메일</dt><dd>bada***@email.com</dd></div>
-            <div><dt>활동 지역</dt><dd>부산광역시</dd></div>
-          </dl>
+          <div className="account-section-title">
+            <h3>개인정보</h3>
+            {!editing && <button onClick={() => { setDraft(profile); setEditing(true); }}>수정</button>}
+          </div>
+          {editing ? (
+            <form
+              className="privacy-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!draft.nickname.trim() || !draft.email.trim()) return;
+                onSaveProfile({
+                  nickname: draft.nickname.trim(),
+                  phone: draft.phone.trim(),
+                  email: draft.email.trim(),
+                  region: draft.region.trim(),
+                });
+                setEditing(false);
+              }}
+            >
+              <label>닉네임<input value={draft.nickname} onChange={(event) => setDraft({ ...draft, nickname: event.target.value })} maxLength={12} required /></label>
+              <label>휴대폰<input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} inputMode="tel" placeholder="010-0000-0000" /></label>
+              <label>이메일<input value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} type="email" required /></label>
+              <label>활동 지역<input value={draft.region} onChange={(event) => setDraft({ ...draft, region: event.target.value })} placeholder="부산광역시" /></label>
+              <div className="privacy-form-actions">
+                <button type="button" onClick={() => { setDraft(profile); setEditing(false); }}>취소</button>
+                <button type="submit">저장하기</button>
+              </div>
+            </form>
+          ) : (
+            <dl>
+              <div><dt>닉네임</dt><dd>{profile.nickname}</dd></div>
+              <div><dt>휴대폰</dt><dd>{profile.phone || "미입력"}</dd></div>
+              <div><dt>이메일</dt><dd>{profile.email}</dd></div>
+              <div><dt>활동 지역</dt><dd>{profile.region || "미입력"}</dd></div>
+            </dl>
+          )}
         </section>
         <button className="logout-button" onClick={() => { if (window.confirm("바로깅에서 로그아웃할까요?")) onLogout(); }}>로그아웃</button>
       </div>
@@ -782,7 +834,7 @@ function ActivityModal({
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: (nickname: string) => void }) {
+function LoginScreen({ onLogin }: { onLogin: (nickname: string, email: string) => void }) {
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -795,7 +847,7 @@ function LoginScreen({ onLogin }: { onLogin: (nickname: string) => void }) {
       return;
     }
     setError("");
-    onLogin(nickname.trim());
+    onLogin(nickname.trim(), email.trim());
   };
 
   return (
@@ -814,7 +866,7 @@ function LoginScreen({ onLogin }: { onLogin: (nickname: string) => void }) {
         <div className="login-options"><label><input type="checkbox" /> 로그인 유지</label><button type="button">비밀번호 찾기</button></div>
         {error && <p className="login-error">{error}</p>}
         <button className="login-button" type="submit">로그인</button>
-        <button className="demo-login" type="button" onClick={() => onLogin(nickname.trim() || "바다러너")}>체험 계정으로 시작하기</button>
+        <button className="demo-login" type="button" onClick={() => onLogin(nickname.trim() || "바다러너", email.trim() || "barogging@email.com")}>체험 계정으로 시작하기</button>
         <p className="signup-copy">바로깅이 처음인가요? <button type="button">회원가입</button></p>
       </form>
     </div>
@@ -824,8 +876,14 @@ function LoginScreen({ onLogin }: { onLogin: (nickname: string) => void }) {
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [nickname, setNickname] = useState("바다러너");
+  const [profile, setProfile] = useState<ProfileData>({
+    nickname: "바다러너",
+    phone: "010-1234-2847",
+    email: "barogging@email.com",
+    region: "부산광역시",
+  });
   const [tab, setTab] = useState<Tab>("plogging");
-  const [points, setPoints] = useState(6840);
+  const [points, setPoints] = useState(2000);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [activityMode, setActivityMode] = useState<Mode | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -913,8 +971,15 @@ export default function Home() {
   if (!loggedIn) {
     return (
       <div className="site-shell">
-        <div className="phone"><LoginScreen onLogin={(name) => {
+        <div className="phone"><LoginScreen onLogin={(name, email) => {
           setNickname(name);
+          setProfile({
+            nickname: name,
+            phone: "",
+            email,
+            region: "부산광역시",
+          });
+          setPoints(2000);
           setClaimedDays([]);
           setPurchaseHistory([]);
           try {
@@ -980,8 +1045,13 @@ export default function Home() {
         {profileOpen && (
           <ProfileModal
             points={points}
-            nickname={nickname}
+            profile={profile}
             activityRecords={activityRecords}
+            onSaveProfile={(updatedProfile) => {
+              setProfile(updatedProfile);
+              setNickname(updatedProfile.nickname);
+              showNotice("개인정보가 저장됐어요.");
+            }}
             onClose={() => setProfileOpen(false)}
             onLogout={() => {
               setProfileOpen(false);
