@@ -331,6 +331,8 @@ button { color: inherit; }
 .camera-view.captured { background: #d8eee3; border-color: #58a57c; }
 .capture-check { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 50%; background: #58a57c; color: white; font-size: 29px; box-shadow: 0 0 0 9px rgba(88,165,124,.14); z-index: 2; }
 .camera-button { border: 0; border-radius: 12px; padding: 9px 16px; background: #173e3b; color: white; font-size: 9px; font-weight: 800; cursor: pointer; margin-top: 4px; }
+.camera-reward-preview { margin: 10px auto 2px !important; padding: 8px 10px; border-radius: 10px; background: #e9f4ed; color: #56806f !important; font-size: 8px !important; }
+.camera-reward-preview b { color: #2f785b; }
 .camera-error { color: #d86451 !important; background: #fff0ec; padding: 7px; border-radius: 8px; margin: 8px 0 !important; }
 .scan-modal h2, .activity-modal h2 { font-size: 20px; margin: 5px 0 7px; letter-spacing: -.05em; }
 .scan-modal > p:not(.eyebrow), .activity-modal > p { font-size: 10px; color: #7a8986; }

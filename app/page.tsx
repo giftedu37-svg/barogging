@@ -426,13 +426,28 @@ function RewardsScreen({
   );
 }
 
-function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete: (earnedPoints: number) => void }) {
+function CameraModal({
+  availableDistance,
+  todayDistance,
+  todaySeconds,
+  onClose,
+  onComplete,
+}: {
+  availableDistance: number;
+  todayDistance: number;
+  todaySeconds: number;
+  onClose: () => void;
+  onComplete: (earnedPoints: number, redeemedDistance: number) => void;
+}) {
   const [step, setStep] = useState(0);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const awardedRef = useRef(false);
+  const redeemableKilometers = Math.floor(availableDistance + Number.EPSILON);
+  const earnedPoints = redeemableKilometers * 10;
+  const todayTime = `${Math.floor(todaySeconds / 60)}분 ${todaySeconds % 60}초`;
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -477,8 +492,8 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
   useEffect(() => {
     if (step !== 2 || awardedRef.current) return;
     awardedRef.current = true;
-    onComplete(34);
-  }, [step, onComplete]);
+    onComplete(earnedPoints, redeemableKilometers);
+  }, [earnedPoints, onComplete, redeemableKilometers, step]);
 
   useEffect(() => () => stopCamera(), []);
 
@@ -497,6 +512,11 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
             <p className="eyebrow">SMART BIN #H12</p>
             <h2>{step === 0 ? "카메라로 배출을 인증해요" : "배출 사진을 확인하고 있어요"}</h2>
             <p>{step === 0 ? "쓰레기를 수거함에 넣는 모습이 잘 보이게 촬영해 주세요." : "촬영한 사진이 확인되면 포인트가 바로 지급돼요."}</p>
+            {step === 0 && (
+              <p className="camera-reward-preview">
+                지급 대기 거리 <b>{availableDistance.toFixed(2)}km</b> · 예상 포인트 <b>{earnedPoints}P</b>
+              </p>
+            )}
             {cameraError && <p className="camera-error">{cameraError}</p>}
             {step === 0 && (
               <button className="camera-button" onClick={cameraOn ? captureWaste : startCamera}>
@@ -512,17 +532,25 @@ function CameraModal({ onClose, onComplete }: { onClose: () => void; onComplete:
             <span className="success-ring">✓</span>
             <p className="eyebrow">인증 완료</p>
             <h2>사진 인증 완료!</h2>
-            <p>배출 사진 인증이 끝나 <b>34P가 바로 지급됐어요.</b></p>
+            <p>
+              {earnedPoints > 0
+                ? <>배출 사진 인증이 끝나 <b>{earnedPoints}P가 바로 지급됐어요.</b></>
+                : <>사진 인증은 완료됐지만 <b>아직 1km 미만이라 지급 포인트가 없어요.</b></>}
+            </p>
             <div className="scan-steps complete-steps">
               {["사진 촬영", "사진 확인", "포인트 지급"].map((label) => <span key={label} className="active"><i>✓</i>{label}</span>)}
             </div>
             <div className="verification-summary">
-              <div><span>오늘 걸은 거리</span><strong>3.4 km</strong></div>
-              <div><span>오늘 활동 시간</span><strong>42분 18초</strong></div>
-              <div><span>획득 포인트</span><strong>+34 P</strong></div>
+              <div><span>오늘 걸은 거리</span><strong>{todayDistance.toFixed(2)} km</strong></div>
+              <div><span>오늘 활동 시간</span><strong>{todayTime}</strong></div>
+              <div><span>획득 포인트</span><strong>+{earnedPoints} P</strong></div>
             </div>
-            <small className="point-rule-note">1km당 10P 기준으로 계산됐어요.</small>
-            <button className="primary-button" onClick={closeCamera}>포인트 지급 확인</button>
+            <small className="point-rule-note">
+              {earnedPoints > 0
+                ? `${redeemableKilometers}km × 10P 기준으로 계산됐어요.`
+                : `다음 10P까지 ${(1 - availableDistance).toFixed(2)}km 남았어요.`}
+            </small>
+            <button className="primary-button" onClick={closeCamera}>{earnedPoints > 0 ? "포인트 지급 확인" : "인증 확인"}</button>
           </div>
         )}
       </div>
@@ -996,6 +1024,7 @@ export default function Home() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [groups, setGroups] = useState<GroupData[]>(initialGroups);
   const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>([]);
+  const [unrewardedDistance, setUnrewardedDistance] = useState(0);
   const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const [attendanceReady, setAttendanceReady] = useState(false);
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
@@ -1047,9 +1076,17 @@ export default function Home() {
     }
   }, [purchaseHistoryReady, purchaseHistory]);
 
-  const completeScan = (earnedPoints: number) => {
-    setPoints((current) => current + earnedPoints);
-    showNotice(`사진 인증 완료 · ${earnedPoints}P 지급 완료`);
+  const todayDistance = activityRecords.reduce((sum, record) => sum + record.distance, 0);
+  const todaySeconds = activityRecords.reduce((sum, record) => sum + record.elapsedSeconds, 0);
+
+  const completeScan = (earnedPoints: number, redeemedDistance: number) => {
+    if (earnedPoints > 0) {
+      setPoints((current) => current + earnedPoints);
+      setUnrewardedDistance((current) => Math.max(0, current - redeemedDistance));
+      showNotice(`사진 인증 완료 · ${redeemedDistance}km를 ${earnedPoints}P로 지급했어요.`);
+      return;
+    }
+    showNotice("사진 인증 완료 · 1km를 채우면 10P를 받을 수 있어요.");
   };
 
   const toggleJoin = (id: number) => {
@@ -1087,6 +1124,7 @@ export default function Home() {
             region: "부산광역시",
           });
           setPoints(2000);
+          setUnrewardedDistance(0);
           setClaimedDays([]);
           setPurchaseHistory([]);
           try {
@@ -1148,7 +1186,15 @@ export default function Home() {
             </button>
           ))}
         </nav>
-        {cameraOpen && <CameraModal onClose={() => setCameraOpen(false)} onComplete={completeScan} />}
+        {cameraOpen && (
+          <CameraModal
+            availableDistance={unrewardedDistance}
+            todayDistance={todayDistance}
+            todaySeconds={todaySeconds}
+            onClose={() => setCameraOpen(false)}
+            onComplete={completeScan}
+          />
+        )}
         {profileOpen && (
           <ProfileModal
             points={points}
@@ -1176,6 +1222,7 @@ export default function Home() {
             onDeleteGroup={deleteGroup}
             onCompleteActivity={(record) => {
               setActivityRecords((current) => [record, ...current]);
+              setUnrewardedDistance((current) => current + record.distance);
               showNotice(`측정 완료 · ${record.distance.toFixed(2)}km · ${record.steps.toLocaleString()}걸음 · ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초`);
             }}
           />
