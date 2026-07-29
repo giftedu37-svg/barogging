@@ -25,6 +25,7 @@ type ProfileData = {
   region: string;
 };
 type GpsStatus = "idle" | "connecting" | "active" | "denied" | "unavailable";
+type MotionStatus = "idle" | "requesting" | "connecting" | "active" | "denied" | "unavailable";
 type GroupData = {
   id: number;
   name: string;
@@ -257,8 +258,14 @@ function calculateGpsDistance(
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-function calculateActivityMetrics(gpsStatus: GpsStatus, gpsDistance: number) {
-  const steps = gpsStatus === "active" ? Math.floor(gpsDistance * 1400) : 0;
+function calculateActivityMetrics(
+  motionStatus: MotionStatus,
+  motionSteps: number,
+  gpsStatus: GpsStatus,
+  gpsDistance: number,
+) {
+  const gpsSteps = gpsStatus === "active" ? Math.floor(gpsDistance * 1400) : 0;
+  const steps = motionStatus === "active" ? motionSteps : gpsSteps;
   return {
     steps,
     distance: Math.floor(steps / 14) / 100,
@@ -1009,11 +1016,22 @@ function ActivityModal({
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
+  const [motionStatus, setMotionStatus] = useState<MotionStatus>("idle");
+  const [motionSteps, setMotionSteps] = useState(0);
   const [gpsPosition, setGpsPosition] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
   const [gpsDistance, setGpsDistance] = useState(0);
   const gpsWatchIdRef = useRef<number | null>(null);
   const previousGpsPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
+  const motionStatusRef = useRef<MotionStatus>("idle");
+  const motionStepCountRef = useRef(0);
+  const motionListenerRef = useRef<((event: DeviceMotionEvent) => void) | null>(null);
+  const motionFallbackTimerRef = useRef<number | null>(null);
+  const motionBaselineRef = useRef(9.81);
+  const motionFilteredRef = useRef(0);
+  const motionPeakReadyRef = useRef(true);
+  const lastMotionCandidateAtRef = useRef(0);
+  const walkingCadenceRef = useRef(false);
 
   useEffect(() => {
     if (!recording) return;
@@ -1032,9 +1050,20 @@ function ActivityModal({
     if (gpsWatchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(gpsWatchIdRef.current);
     }
+    if (motionListenerRef.current) {
+      window.removeEventListener("devicemotion", motionListenerRef.current);
+    }
+    if (motionFallbackTimerRef.current !== null) {
+      window.clearTimeout(motionFallbackTimerRef.current);
+    }
   }, []);
 
-  const { steps: measuredSteps, distance: measuredDistance } = calculateActivityMetrics(gpsStatus, gpsDistance);
+  const { steps: measuredSteps, distance: measuredDistance } = calculateActivityMetrics(
+    motionStatus,
+    motionSteps,
+    gpsStatus,
+    gpsDistance,
+  );
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const gpsStatusLabel: Record<GpsStatus, string> = {
     idle: "GPS 준비",
@@ -1042,6 +1071,122 @@ function ActivityModal({
     active: "GPS 연결됨",
     denied: "위치 권한 필요",
     unavailable: "GPS 사용 불가",
+  };
+  const motionStatusLabel: Record<MotionStatus, string> = {
+    idle: "걸음 센서 준비",
+    requesting: "센서 권한 확인 중",
+    connecting: "걸음 센서 연결 중",
+    active: "걸음 센서 연결됨",
+    denied: "GPS 대체 측정",
+    unavailable: "GPS 대체 측정",
+  };
+  const sensorCardStatus = motionStatus === "requesting" ? "connecting" : motionStatus;
+
+  const updateMotionStatus = (status: MotionStatus) => {
+    motionStatusRef.current = status;
+    setMotionStatus(status);
+  };
+
+  const stopMotionTracking = () => {
+    if (motionListenerRef.current) {
+      window.removeEventListener("devicemotion", motionListenerRef.current);
+      motionListenerRef.current = null;
+    }
+    if (motionFallbackTimerRef.current !== null) {
+      window.clearTimeout(motionFallbackTimerRef.current);
+      motionFallbackTimerRef.current = null;
+    }
+  };
+
+  const startMotionTracking = async () => {
+    stopMotionTracking();
+    motionStepCountRef.current = 0;
+    setMotionSteps(0);
+    motionBaselineRef.current = 9.81;
+    motionFilteredRef.current = 0;
+    motionPeakReadyRef.current = true;
+    lastMotionCandidateAtRef.current = 0;
+    walkingCadenceRef.current = false;
+
+    const MotionEvent = window.DeviceMotionEvent as (typeof DeviceMotionEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    }) | undefined;
+
+    if (!MotionEvent) {
+      updateMotionStatus("unavailable");
+      return;
+    }
+
+    if (MotionEvent.requestPermission) {
+      updateMotionStatus("requesting");
+      try {
+        const permission = await MotionEvent.requestPermission();
+        if (permission !== "granted") {
+          updateMotionStatus("denied");
+          return;
+        }
+      } catch {
+        updateMotionStatus("denied");
+        return;
+      }
+    }
+
+    updateMotionStatus("connecting");
+    const handleMotion = (event: DeviceMotionEvent) => {
+      const direct = event.acceleration;
+      const includingGravity = event.accelerationIncludingGravity;
+      const hasDirectAcceleration = direct
+        && direct.x !== null
+        && direct.y !== null
+        && direct.z !== null;
+      const source = hasDirectAcceleration
+        ? direct
+        : includingGravity;
+      if (!source || source.x === null || source.y === null || source.z === null) return;
+
+      if (motionStatusRef.current !== "active") {
+        updateMotionStatus("active");
+        if (motionFallbackTimerRef.current !== null) {
+          window.clearTimeout(motionFallbackTimerRef.current);
+          motionFallbackTimerRef.current = null;
+        }
+      }
+
+      const magnitude = Math.sqrt(source.x ** 2 + source.y ** 2 + source.z ** 2);
+      let movementSignal = magnitude;
+      if (source === includingGravity) {
+        motionBaselineRef.current = motionBaselineRef.current * 0.9 + magnitude * 0.1;
+        movementSignal = Math.abs(magnitude - motionBaselineRef.current);
+      }
+      motionFilteredRef.current = motionFilteredRef.current * 0.65 + movementSignal * 0.35;
+
+      if (motionFilteredRef.current < 0.42) {
+        motionPeakReadyRef.current = true;
+      }
+      if (!motionPeakReadyRef.current || motionFilteredRef.current < 0.9) return;
+
+      motionPeakReadyRef.current = false;
+      const now = window.performance.now();
+      const gap = now - lastMotionCandidateAtRef.current;
+      if (gap >= 280 && gap <= 1300) {
+        const increment = walkingCadenceRef.current ? 1 : 2;
+        walkingCadenceRef.current = true;
+        motionStepCountRef.current += increment;
+        setMotionSteps(motionStepCountRef.current);
+      } else if (gap > 1300) {
+        walkingCadenceRef.current = false;
+      }
+      lastMotionCandidateAtRef.current = now;
+    };
+
+    motionListenerRef.current = handleMotion;
+    window.addEventListener("devicemotion", handleMotion);
+    motionFallbackTimerRef.current = window.setTimeout(() => {
+      if (motionStatusRef.current === "connecting") {
+        updateMotionStatus("unavailable");
+        stopMotionTracking();
+      }
+    }, 4000);
   };
 
   const startGpsTracking = () => {
@@ -1175,32 +1320,41 @@ function ActivityModal({
         <h2>혼자 플로깅</h2>
         <p>현재 위치에서 바로 기록을 시작할까요?</p>
         {recording && <span className="recording-live"><i></i>측정 중</span>}
-        <div className={`gps-card gps-${gpsStatus}`}>
+        <div className={`gps-card gps-${sensorCardStatus}`}>
           <div>
-            <span><i></i>{gpsStatusLabel[gpsStatus]}</span>
+            <span><i></i>{motionStatusLabel[motionStatus]}</span>
             <small>
-              {gpsPosition
-                ? `현재 위치 ${gpsPosition.latitude.toFixed(5)}, ${gpsPosition.longitude.toFixed(5)}`
-                : gpsStatus === "idle"
-                  ? "측정을 시작하면 현재 위치를 확인해요."
-                  : gpsStatus === "denied"
-                    ? "휴대폰 설정에서 위치 권한을 허용해 주세요."
-                    : "휴대폰의 현재 위치를 찾고 있어요."}
+              {motionStatus === "idle"
+                ? "측정을 시작하면 걸음 센서 권한을 확인해요."
+                : motionStatus === "active"
+                  ? "휴대폰 움직임에서 걷기 리듬을 감지하고 있어요."
+                  : motionStatus === "denied"
+                    ? "동작 센서 권한이 없어 GPS로 대신 측정해요."
+                    : motionStatus === "unavailable"
+                      ? "이 기기에서는 GPS로 걸음 수를 대신 계산해요."
+                      : "휴대폰의 걸음 센서를 연결하고 있어요."}
             </small>
           </div>
-          {gpsPosition && <b>오차 약 {Math.round(gpsPosition.accuracy)}m</b>}
+          <b>{gpsStatusLabel[gpsStatus]}{gpsPosition ? ` · 오차 ${Math.round(gpsPosition.accuracy)}m` : ""}</b>
         </div>
         <div className={`live-preview ${recording ? "is-recording" : ""}`}>
           <span><i>이동 거리</i><b>{measuredDistance.toFixed(2)} km</b></span>
           <span><i>시간</i><b>{measuredTime}</b></span>
           <span><i>걸음 수</i><b>{measuredSteps.toLocaleString()}</b></span>
         </div>
-        <p className="distance-rule">{recording ? "GPS에서 실제 이동이 확인될 때만 걸음 수와 거리가 기록돼요." : "정지 상태에서는 걸음 수 0"}</p>
+        <p className="distance-rule">
+          {recording
+            ? motionStatus === "active"
+              ? "휴대폰에서 일정한 걷기 리듬이 감지될 때만 걸음 수가 기록돼요."
+              : "걸음 센서를 사용할 수 없어 GPS 이동 거리로 대신 측정하고 있어요."
+            : "걷기 동작이 감지될 때만 걸음 수가 올라가요."}
+        </p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
-          onClick={() => {
+          onClick={async () => {
             if (!recording) {
               setElapsed(0);
+              await startMotionTracking();
               recordingStartedAtRef.current = window.performance.now();
               startGpsTracking();
               setRecording(true);
@@ -1210,7 +1364,13 @@ function ActivityModal({
                 : Math.max(0, Math.floor(
                   (window.performance.now() - recordingStartedAtRef.current) / 1000,
                 ));
-              const finalMetrics = calculateActivityMetrics(gpsStatus, gpsDistance);
+              const finalMetrics = calculateActivityMetrics(
+                motionStatusRef.current,
+                motionStepCountRef.current,
+                gpsStatus,
+                gpsDistance,
+              );
+              stopMotionTracking();
               stopGpsTracking();
               setRecording(false);
               recordingStartedAtRef.current = null;
@@ -1304,7 +1464,6 @@ function LoginScreen({ onLogin }: { onLogin: (nickname: string, email: string) =
       setError("로그인 정보를 확인하지 못했어요.");
     }
   };
-
   const switchMode = () => {
     setMode((current) => current === "login" ? "signup" : "login");
     setPassword("");
