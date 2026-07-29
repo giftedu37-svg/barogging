@@ -843,11 +843,14 @@ function ActivityModal({
     }
   }, []);
 
-  const estimatedDistance = elapsed * 0.0032;
+  const estimatedDistance = elapsed * 0.01;
   const measuredSteps = elapsed * 2;
   const rawMeasuredDistance = gpsStatus === "active" ? gpsDistance : estimatedDistance;
   const measuredDistance = toHundredthKilometer(rawMeasuredDistance);
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+  const distanceTrackingLabel = gpsStatus === "active"
+    ? "GPS 이동 거리가 0.01km 단위로 실시간 기록되고 있어요."
+    : "예상 이동 거리가 매초 0.01km씩 실시간 기록되고 있어요.";
   const gpsStatusLabel: Record<GpsStatus, string> = {
     idle: "GPS 준비",
     connecting: "GPS 연결 중",
@@ -997,7 +1000,7 @@ function ActivityModal({
           <span><i>시간</i><b>{measuredTime}</b></span>
           <span><i>걸음 수</i><b>{measuredSteps.toLocaleString()}</b></span>
         </div>
-        <p className="distance-rule">{recording ? "이동 거리가 0.01km 단위로 실시간 기록되고 있어요." : "GPS로 0.01km 단위 거리 측정 · 1km당 10P"}</p>
+        <p className="distance-rule">{recording ? distanceTrackingLabel : "GPS로 0.01km 단위 거리 측정 · 1km당 10P"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
