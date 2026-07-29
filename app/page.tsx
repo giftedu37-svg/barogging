@@ -40,6 +40,15 @@ type LocalAccount = {
   email: string;
   passwordHash: string;
 };
+type PersistedAccountState = {
+  profile: ProfileData;
+  points: number;
+  groups: GroupData[];
+  activityRecords: ActivityRecord[];
+  unrewardedDistance: number;
+  claimedDays: number[];
+  purchaseHistory: PurchaseRecord[];
+};
 
 const navItems: { id: Tab; icon: string; label: string }[] = [
   { id: "plogging", icon: "⌁", label: "플로깅" },
@@ -103,25 +112,114 @@ function activityRecordsStorageKey(email: string) {
   return `barogging-activity-records:${email.trim().toLowerCase()}`;
 }
 
+function accountStateStorageKey(email: string) {
+  return `barogging-account-state-v1:${email.trim().toLowerCase()}`;
+}
+
+function isActivityRecord(record: unknown): record is ActivityRecord {
+  if (typeof record !== "object" || record === null) return false;
+  const item = record as Partial<ActivityRecord>;
+  return (
+    typeof item.id === "number"
+    && typeof item.distance === "number"
+    && Number.isFinite(item.distance)
+    && typeof item.elapsedSeconds === "number"
+    && Number.isFinite(item.elapsedSeconds)
+    && typeof item.steps === "number"
+    && Number.isFinite(item.steps)
+    && typeof item.createdAt === "string"
+  );
+}
+
 function readStoredActivityRecords(email: string): ActivityRecord[] {
   try {
     const saved = window.localStorage.getItem(activityRecordsStorageKey(email));
     if (!saved) return [];
     const parsed = JSON.parse(saved);
-    return Array.isArray(parsed)
-      ? parsed.filter((record): record is ActivityRecord => (
-        typeof record?.id === "number"
-        && typeof record?.distance === "number"
-        && Number.isFinite(record.distance)
-        && typeof record?.elapsedSeconds === "number"
-        && Number.isFinite(record.elapsedSeconds)
-        && typeof record?.steps === "number"
-        && Number.isFinite(record.steps)
-        && typeof record?.createdAt === "string"
-      ))
-      : [];
+    return Array.isArray(parsed) ? parsed.filter(isActivityRecord) : [];
   } catch {
     return [];
+  }
+}
+
+function isGroupData(group: unknown): group is GroupData {
+  if (typeof group !== "object" || group === null) return false;
+  const item = group as Partial<GroupData>;
+  return (
+    typeof item.id === "number"
+    && typeof item.name === "string"
+    && typeof item.place === "string"
+    && typeof item.time === "string"
+    && typeof item.max === "number"
+    && typeof item.count === "number"
+    && typeof item.joined === "boolean"
+    && typeof item.owned === "boolean"
+  );
+}
+
+function isPurchaseRecord(record: unknown): record is PurchaseRecord {
+  if (typeof record !== "object" || record === null) return false;
+  const item = record as Partial<PurchaseRecord>;
+  return (
+    typeof item.id === "number"
+    && typeof item.name === "string"
+    && typeof item.price === "number"
+    && typeof item.purchasedAt === "string"
+  );
+}
+
+function readStoredAccountState(nickname: string, email: string): PersistedAccountState {
+  const normalizedEmail = email.trim().toLowerCase();
+  const migratedActivityRecords = readStoredActivityRecords(normalizedEmail);
+  const fallback: PersistedAccountState = {
+    profile: {
+      nickname,
+      phone: "",
+      email: normalizedEmail,
+      region: "부산광역시",
+    },
+    points: 2000,
+    groups: initialGroups.map((group) => ({ ...group })),
+    activityRecords: migratedActivityRecords,
+    unrewardedDistance: migratedActivityRecords.reduce((sum, record) => sum + record.distance, 0),
+    claimedDays: [],
+    purchaseHistory: [],
+  };
+
+  try {
+    const saved = window.localStorage.getItem(accountStateStorageKey(normalizedEmail));
+    if (!saved) return fallback;
+    const parsed = JSON.parse(saved) as Partial<PersistedAccountState>;
+    const savedProfile = parsed.profile;
+    return {
+      profile: savedProfile
+        && typeof savedProfile.nickname === "string"
+        && typeof savedProfile.phone === "string"
+        && typeof savedProfile.email === "string"
+        && typeof savedProfile.region === "string"
+        ? savedProfile
+        : fallback.profile,
+      points: typeof parsed.points === "number" && Number.isFinite(parsed.points)
+        ? parsed.points
+        : fallback.points,
+      groups: Array.isArray(parsed.groups) && parsed.groups.every(isGroupData)
+        ? parsed.groups
+        : fallback.groups,
+      activityRecords: Array.isArray(parsed.activityRecords)
+        ? parsed.activityRecords.filter(isActivityRecord)
+        : fallback.activityRecords,
+      unrewardedDistance: typeof parsed.unrewardedDistance === "number" && Number.isFinite(parsed.unrewardedDistance)
+        ? parsed.unrewardedDistance
+        : fallback.unrewardedDistance,
+      claimedDays: Array.isArray(parsed.claimedDays)
+        ? parsed.claimedDays.filter((day): day is number => Number.isInteger(day) && day >= 1 && day <= 31)
+        : fallback.claimedDays,
+      purchaseHistory: Array.isArray(parsed.purchaseHistory)
+        ? parsed.purchaseHistory.filter(isPurchaseRecord)
+        : fallback.purchaseHistory,
+    };
+  } catch {
+    return fallback;
   }
 }
 
@@ -1237,6 +1335,8 @@ function LoginScreen({ onLogin }: { onLogin: (nickname: string, email: string) =
 
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountStateReady, setAccountStateReady] = useState(false);
   const [nickname, setNickname] = useState("바다러너");
   const [profile, setProfile] = useState<ProfileData>({
     nickname: "바다러너",
@@ -1251,12 +1351,9 @@ export default function Home() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [groups, setGroups] = useState<GroupData[]>(initialGroups);
   const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>([]);
-  const [activityRecordsReady, setActivityRecordsReady] = useState(false);
   const [unrewardedDistance, setUnrewardedDistance] = useState(0);
-  const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-  const [attendanceReady, setAttendanceReady] = useState(false);
+  const [claimedDays, setClaimedDays] = useState<number[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseRecord[]>([]);
-  const [purchaseHistoryReady, setPurchaseHistoryReady] = useState(false);
   const [notice, setNotice] = useState("");
   const noticeTimerRef = useRef<number | null>(null);
 
@@ -1267,54 +1364,35 @@ export default function Home() {
   };
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("barogging-attendance-2026-07");
-      if (saved) setClaimedDays(JSON.parse(saved));
-    } catch {
-      // 기기 저장소를 사용할 수 없어도 현재 화면에서는 한 번만 지급합니다.
-    }
-    setAttendanceReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!attendanceReady) return;
-    try {
-      window.localStorage.setItem("barogging-attendance-2026-07", JSON.stringify(claimedDays));
-    } catch {
-      // 저장소가 차단된 환경에서는 현재 접속 중인 출석 상태를 유지합니다.
-    }
-  }, [attendanceReady, claimedDays]);
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("barogging-purchase-history");
-      if (saved) setPurchaseHistory(JSON.parse(saved));
-    } catch {
-      // 저장소가 차단된 환경에서는 현재 접속 중인 교환 내역을 유지합니다.
-    }
-    setPurchaseHistoryReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!purchaseHistoryReady) return;
-    try {
-      window.localStorage.setItem("barogging-purchase-history", JSON.stringify(purchaseHistory));
-    } catch {
-      // 저장소가 차단된 환경에서는 현재 접속 중인 교환 내역을 유지합니다.
-    }
-  }, [purchaseHistoryReady, purchaseHistory]);
-
-  useEffect(() => {
-    if (!loggedIn || !activityRecordsReady) return;
+    if (!loggedIn || !accountStateReady || !accountEmail) return;
     try {
       window.localStorage.setItem(
-        activityRecordsStorageKey(profile.email),
-        JSON.stringify(activityRecords),
+        accountStateStorageKey(accountEmail),
+        JSON.stringify({
+          profile,
+          points,
+          groups,
+          activityRecords,
+          unrewardedDistance,
+          claimedDays,
+          purchaseHistory,
+        } satisfies PersistedAccountState),
       );
     } catch {
-      // 저장소가 차단된 환경에서는 현재 접속 중인 활동 기록만 유지합니다.
+      // 저장소가 차단된 환경에서는 현재 접속 중인 계정 정보만 유지합니다.
     }
-  }, [activityRecords, activityRecordsReady, loggedIn, profile.email]);
+  }, [
+    accountEmail,
+    accountStateReady,
+    activityRecords,
+    claimedDays,
+    groups,
+    loggedIn,
+    points,
+    profile,
+    purchaseHistory,
+    unrewardedDistance,
+  ]);
 
   const todayDistance = activityRecords.reduce((sum, record) => sum + record.distance, 0);
   const todaySeconds = activityRecords.reduce((sum, record) => sum + record.elapsedSeconds, 0);
@@ -1356,25 +1434,19 @@ export default function Home() {
     return (
       <div className="site-shell">
         <div className="phone"><LoginScreen onLogin={(name, email) => {
-          setNickname(name);
-          setActivityRecords(readStoredActivityRecords(email));
-          setActivityRecordsReady(true);
-          setProfile({
-            nickname: name,
-            phone: "",
-            email,
-            region: "부산광역시",
-          });
-          setPoints(2000);
-          setUnrewardedDistance(0);
-          setClaimedDays([]);
-          setPurchaseHistory([]);
-          try {
-            window.localStorage.setItem("barogging-attendance-2026-07", "[]");
-            window.localStorage.setItem("barogging-purchase-history", "[]");
-          } catch {
-            // 저장소가 차단되어도 현재 로그인에서는 출석과 이용내역을 초기화합니다.
-          }
+          const normalizedEmail = email.trim().toLowerCase();
+          const savedAccount = readStoredAccountState(name, normalizedEmail);
+          setAccountStateReady(false);
+          setAccountEmail(normalizedEmail);
+          setNickname(savedAccount.profile.nickname);
+          setProfile(savedAccount.profile);
+          setPoints(savedAccount.points);
+          setGroups(savedAccount.groups);
+          setActivityRecords(savedAccount.activityRecords);
+          setUnrewardedDistance(savedAccount.unrewardedDistance);
+          setClaimedDays(savedAccount.claimedDays);
+          setPurchaseHistory(savedAccount.purchaseHistory);
+          setAccountStateReady(true);
           setLoggedIn(true);
         }} /></div>
       </div>
@@ -1450,8 +1522,8 @@ export default function Home() {
             onClose={() => setProfileOpen(false)}
             onLogout={() => {
               setProfileOpen(false);
-              setActivityRecordsReady(false);
-              setActivityRecords([]);
+              setAccountStateReady(false);
+              setAccountEmail("");
               setLoggedIn(false);
             }}
           />
