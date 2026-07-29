@@ -18,6 +18,7 @@ body {
   background: #d6ebe5;
   color: var(--ink);
   font-family: "Arial Rounded MT Bold", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-synthesis: none;
 }
 button, input { font: inherit; }
 button { color: inherit; }

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Jua } from "next/font/google";
+import { Gowun_Dodum } from "next/font/google";
 import "./globals.css";
 
 const staticBasePath = process.env.GITHUB_PAGES === "true" ? "/barogging" : "";
-const jua = Jua({
+const gowunDodum = Gowun_Dodum({
   weight: "400",
   display: "swap",
   preload: false,
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body className={jua.className}>{children}</body>
+      <body className={gowunDodum.className}>{children}</body>
     </html>
   );
 }

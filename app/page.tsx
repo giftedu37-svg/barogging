@@ -761,6 +761,7 @@ function ActivityModal({
 
   const estimatedDistance = elapsed * 0.0032;
   const measuredSteps = elapsed * 2;
+  const measuredDistance = gpsStatus === "active" ? gpsDistance : estimatedDistance;
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const gpsStatusLabel: Record<GpsStatus, string> = {
     idle: "GPS 준비",
@@ -906,8 +907,12 @@ function ActivityModal({
           </div>
           {gpsPosition && <b>오차 약 {Math.round(gpsPosition.accuracy)}m</b>}
         </div>
-        <div className={`live-preview ${recording ? "is-recording" : ""}`}><span><i>거리</i><b>0.00 km</b></span><span><i>시간</i><b>{measuredTime}</b></span><span><i>걸음</i><b>0</b></span></div>
-        <p className="distance-rule">{recording ? "GPS 거리와 걸음 수는 종료 후 기록에 반영돼요." : "GPS로 이동 거리 측정 · 1km당 10P"}</p>
+        <div className={`live-preview ${recording ? "is-recording" : ""}`}>
+          <span><i>이동 거리</i><b>{measuredDistance.toFixed(2)} km</b></span>
+          <span><i>시간</i><b>{measuredTime}</b></span>
+          <span><i>걸음 수</i><b>{measuredSteps.toLocaleString()}</b></span>
+        </div>
+        <p className="distance-rule">{recording ? "거리·시간·걸음 수가 실시간으로 기록되고 있어요." : "GPS로 이동 거리 측정 · 1km당 10P"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
@@ -920,7 +925,7 @@ function ActivityModal({
               setRecording(false);
               onCompleteActivity({
                 id: Date.now(),
-                distance: gpsDistance > 0 ? gpsDistance : estimatedDistance,
+                distance: measuredDistance,
                 elapsedSeconds: elapsed,
                 steps: measuredSteps,
                 createdAt: "오늘",
@@ -1171,7 +1176,7 @@ export default function Home() {
             onDeleteGroup={deleteGroup}
             onCompleteActivity={(record) => {
               setActivityRecords((current) => [record, ...current]);
-              showNotice(`측정 완료 · ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초가 늘었어요.`);
+              showNotice(`측정 완료 · ${record.distance.toFixed(2)}km · ${record.steps.toLocaleString()}걸음 · ${Math.floor(record.elapsedSeconds / 60)}분 ${record.elapsedSeconds % 60}초`);
             }}
           />
         )}
