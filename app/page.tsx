@@ -104,6 +104,10 @@ function calculateGpsDistance(
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
+function toHundredthKilometer(distance: number) {
+  return Math.floor((distance + Number.EPSILON) * 100) / 100;
+}
+
 function Header({ points, onAccount }: { points: number; onAccount: () => void }) {
   return (
     <header className="topbar">
@@ -841,7 +845,8 @@ function ActivityModal({
 
   const estimatedDistance = elapsed * 0.0032;
   const measuredSteps = elapsed * 2;
-  const measuredDistance = gpsStatus === "active" ? gpsDistance : estimatedDistance;
+  const rawMeasuredDistance = gpsStatus === "active" ? gpsDistance : estimatedDistance;
+  const measuredDistance = toHundredthKilometer(rawMeasuredDistance);
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const gpsStatusLabel: Record<GpsStatus, string> = {
     idle: "GPS 준비",
@@ -992,7 +997,7 @@ function ActivityModal({
           <span><i>시간</i><b>{measuredTime}</b></span>
           <span><i>걸음 수</i><b>{measuredSteps.toLocaleString()}</b></span>
         </div>
-        <p className="distance-rule">{recording ? "거리·시간·걸음 수가 실시간으로 기록되고 있어요." : "GPS로 이동 거리 측정 · 1km당 10P"}</p>
+        <p className="distance-rule">{recording ? "이동 거리가 0.01km 단위로 실시간 기록되고 있어요." : "GPS로 0.01km 단위 거리 측정 · 1km당 10P"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
