@@ -257,12 +257,8 @@ function calculateGpsDistance(
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-function calculateActivityMetrics(elapsedSeconds: number, gpsStatus: GpsStatus, gpsDistance: number) {
-  const timeBasedSteps = elapsedSeconds * 2;
-  const gpsBasedSteps = Math.floor(gpsDistance * 1400);
-  const steps = gpsStatus === "active"
-    ? Math.max(timeBasedSteps, gpsBasedSteps)
-    : timeBasedSteps;
+function calculateActivityMetrics(gpsStatus: GpsStatus, gpsDistance: number) {
+  const steps = gpsStatus === "active" ? Math.floor(gpsDistance * 1400) : 0;
   return {
     steps,
     distance: Math.floor(steps / 14) / 100,
@@ -1038,11 +1034,7 @@ function ActivityModal({
     }
   }, []);
 
-  const { steps: measuredSteps, distance: measuredDistance } = calculateActivityMetrics(
-    elapsed,
-    gpsStatus,
-    gpsDistance,
-  );
+  const { steps: measuredSteps, distance: measuredDistance } = calculateActivityMetrics(gpsStatus, gpsDistance);
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const gpsStatusLabel: Record<GpsStatus, string> = {
     idle: "GPS 준비",
@@ -1076,12 +1068,22 @@ function ActivityModal({
         const previous = previousGpsPositionRef.current;
         if (previous) {
           const segmentDistance = calculateGpsDistance(previous, current);
-          const minimumMovement = Math.max(0.003, coords.accuracy / 2000);
-          if (coords.accuracy <= 100 && segmentDistance >= minimumMovement && segmentDistance <= 0.2) {
+          const minimumMovement = Math.max(0.01, coords.accuracy / 2000);
+          const speedConfirmsMovement = coords.speed === null || coords.speed >= 0.35;
+          if (
+            coords.accuracy <= 80
+            && speedConfirmsMovement
+            && segmentDistance >= minimumMovement
+            && segmentDistance <= 0.2
+          ) {
             setGpsDistance((distance) => distance + segmentDistance);
+            previousGpsPositionRef.current = current;
+          } else if (coords.accuracy > 80 || segmentDistance > 0.2) {
+            previousGpsPositionRef.current = current;
           }
+        } else {
+          previousGpsPositionRef.current = current;
         }
-        previousGpsPositionRef.current = current;
       },
       (error) => {
         setGpsStatus(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable");
@@ -1193,7 +1195,7 @@ function ActivityModal({
           <span><i>시간</i><b>{measuredTime}</b></span>
           <span><i>걸음 수</i><b>{measuredSteps.toLocaleString()}</b></span>
         </div>
-        <p className="distance-rule">{recording ? "14걸음마다 이동 거리가 0.01km씩 실시간 기록되고 있어요." : "14걸음마다 0.01km · 1km당 10P"}</p>
+        <p className="distance-rule">{recording ? "GPS에서 실제 이동이 확인될 때만 걸음 수와 거리가 기록돼요." : "정지 상태에서는 걸음 수 0 · 14걸음마다 0.01km"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
@@ -1208,7 +1210,7 @@ function ActivityModal({
                 : Math.max(0, Math.floor(
                   (window.performance.now() - recordingStartedAtRef.current) / 1000,
                 ));
-              const finalMetrics = calculateActivityMetrics(finalElapsed, gpsStatus, gpsDistance);
+              const finalMetrics = calculateActivityMetrics(gpsStatus, gpsDistance);
               stopGpsTracking();
               setRecording(false);
               recordingStartedAtRef.current = null;
