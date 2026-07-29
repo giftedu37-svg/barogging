@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Jua } from "next/font/google";
 import "./globals.css";
 
 const staticBasePath = process.env.GITHUB_PAGES === "true" ? "/barogging" : "";
+const jua = Jua({
+  weight: "400",
+  display: "swap",
+  preload: false,
+  fallback: ["Arial Rounded MT Bold", "Apple SD Gothic Neo", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://padojoop-plogging.workspace-925535.chatgpt.site"),
@@ -24,7 +31,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body className={jua.className}>{children}</body>
     </html>
   );
 }
