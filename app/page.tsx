@@ -35,6 +35,11 @@ type GroupData = {
   joined: boolean;
   owned: boolean;
 };
+type LocalAccount = {
+  nickname: string;
+  email: string;
+  passwordHash: string;
+};
 
 const navItems: { id: Tab; icon: string; label: string }[] = [
   { id: "plogging", icon: "⌁", label: "플로깅" },
@@ -69,6 +74,56 @@ const communityRoutes = [
   { id: 4, title: "이기대 해안 산책길", area: "남구 · 이기대", distance: "6.8km", time: "1시간 38분", bins: 3, author: "초록발걸음", avatar: "초", likes: 132, tone: "sand", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.115%2C35.117%2C129.135%2C35.135&layer=mapnik&marker=35.1268%2C129.1237" },
 ];
 const routeLikesStorageKey = "barogging-liked-route-ids";
+const localAccountsStorageKey = "barogging-local-accounts";
+
+async function hashPassword(password: string) {
+  const data = new TextEncoder().encode(password);
+  const digest = await window.crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function readLocalAccounts(): LocalAccount[] {
+  try {
+    const saved = window.localStorage.getItem(localAccountsStorageKey);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed)
+      ? parsed.filter((account): account is LocalAccount => (
+        typeof account?.nickname === "string"
+        && typeof account?.email === "string"
+        && typeof account?.passwordHash === "string"
+      ))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function activityRecordsStorageKey(email: string) {
+  return `barogging-activity-records:${email.trim().toLowerCase()}`;
+}
+
+function readStoredActivityRecords(email: string): ActivityRecord[] {
+  try {
+    const saved = window.localStorage.getItem(activityRecordsStorageKey(email));
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed)
+      ? parsed.filter((record): record is ActivityRecord => (
+        typeof record?.id === "number"
+        && typeof record?.distance === "number"
+        && Number.isFinite(record.distance)
+        && typeof record?.elapsedSeconds === "number"
+        && Number.isFinite(record.elapsedSeconds)
+        && typeof record?.steps === "number"
+        && Number.isFinite(record.steps)
+        && typeof record?.createdAt === "string"
+      ))
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 function readStoredRouteLikes() {
   if (typeof window === "undefined") return [];
@@ -216,11 +271,25 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
       </div>
 
       {activityRecords.length > 0 && (
-        <section className="latest-session-card">
-          <span>방금 저장된 기록</span>
-          <strong>{activityRecords[0].distance.toFixed(2)}km · {Math.floor(activityRecords[0].elapsedSeconds / 60)}분 {activityRecords[0].elapsedSeconds % 60}초</strong>
-          <small>{activityRecords[0].steps.toLocaleString()}걸음 · {activityRecords[0].createdAt}</small>
-        </section>
+        <>
+          <section className="latest-session-card">
+            <span>방금 저장된 기록</span>
+            <strong>{activityRecords[0].distance.toFixed(2)}km · {Math.floor(activityRecords[0].elapsedSeconds / 60)}분 {activityRecords[0].elapsedSeconds % 60}초</strong>
+            <small>{activityRecords[0].steps.toLocaleString()}걸음 · {activityRecords[0].createdAt}</small>
+          </section>
+          <section className="activity-session-section">
+            <div className="section-head"><h2>내 측정 기록</h2><small>{activityRecords.length}회</small></div>
+            <div className="activity-session-list">
+              {activityRecords.map((record) => (
+                <article key={record.id}>
+                  <div><strong>{record.distance.toFixed(2)}km</strong><small>{record.createdAt}</small></div>
+                  <span><b>{record.steps.toLocaleString()}</b><small>걸음</small></span>
+                  <span><b>{Math.floor(record.elapsedSeconds / 60)}분 {record.elapsedSeconds % 60}초</b><small>활동 시간</small></span>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       <section className="section-block">
@@ -1011,7 +1080,12 @@ function ActivityModal({
                 distance: measuredDistance,
                 elapsedSeconds: elapsed,
                 steps: measuredSteps,
-                createdAt: "오늘",
+                createdAt: new Date().toLocaleString("ko-KR", {
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
               });
               onClose();
             }
@@ -1025,19 +1099,78 @@ function ActivityModal({
 }
 
 function LoginScreen({ onLogin }: { onLogin: (nickname: string, email: string) => void }) {
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
 
-  const login = (event: React.FormEvent) => {
+  const submitAccount = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!nickname.trim() || !email.trim() || !password.trim()) {
-      setError("닉네임, 이메일과 비밀번호를 모두 입력해 주세요.");
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password.trim() || (mode === "signup" && !nickname.trim())) {
+      setError(mode === "signup"
+        ? "닉네임, 이메일과 비밀번호를 모두 입력해 주세요."
+        : "이메일과 비밀번호를 모두 입력해 주세요.");
       return;
     }
+
+    if (mode === "signup") {
+      if (password.length < 6) {
+        setError("비밀번호는 6자 이상 입력해 주세요.");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        setError("비밀번호 확인이 일치하지 않아요.");
+        return;
+      }
+
+      const accounts = readLocalAccounts();
+      if (accounts.some((account) => account.email === normalizedEmail)) {
+        setError("이미 가입된 이메일이에요.");
+        return;
+      }
+
+      try {
+        const account: LocalAccount = {
+          nickname: nickname.trim(),
+          email: normalizedEmail,
+          passwordHash: await hashPassword(password),
+        };
+        window.localStorage.setItem(localAccountsStorageKey, JSON.stringify([...accounts, account]));
+        setError("");
+        onLogin(account.nickname, account.email);
+      } catch {
+        setError("회원가입 정보를 저장하지 못했어요. 브라우저 저장소 설정을 확인해 주세요.");
+      }
+      return;
+    }
+
+    const account = readLocalAccounts().find((item) => item.email === normalizedEmail);
+    if (!account) {
+      setError("가입된 이메일이 없어요. 먼저 회원가입을 해 주세요.");
+      return;
+    }
+
+    try {
+      if (account.passwordHash !== await hashPassword(password)) {
+        setError("비밀번호가 일치하지 않아요.");
+        return;
+      }
+      setError("");
+      onLogin(account.nickname, account.email);
+    } catch {
+      setError("로그인 정보를 확인하지 못했어요.");
+    }
+  };
+
+  const switchMode = () => {
+    setMode((current) => current === "login" ? "signup" : "login");
+    setPassword("");
+    setPasswordConfirm("");
     setError("");
-    onLogin(nickname.trim(), email.trim());
   };
 
   return (
@@ -1048,16 +1181,28 @@ function LoginScreen({ onLogin }: { onLogin: (nickname: string, email: string) =
         <p>걷고, 줍고, 부산의 바다를 바꾸다.</p>
       </div>
       <div className="login-wave"><i></i><b></b></div>
-      <form className="login-card" onSubmit={login}>
-        <div><p className="eyebrow">WELCOME BACK</p><h2>다시 바다를 달려볼까요?</h2></div>
-        <label>닉네임<input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="앱에서 사용할 닉네임" maxLength={12} /></label>
+      <form className={`login-card ${mode === "signup" ? "signup-mode" : ""}`} onSubmit={submitAccount}>
+        <div>
+          <p className="eyebrow">{mode === "signup" ? "JOIN BAROGGING" : "WELCOME BACK"}</p>
+          <h2>{mode === "signup" ? "바다를 위한 첫걸음을 시작해요" : "다시 바다를 달려볼까요?"}</h2>
+        </div>
+        {mode === "signup" && (
+          <label>닉네임<input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="앱에서 사용할 닉네임" maxLength={12} autoComplete="nickname" /></label>
+        )}
         <label>이메일<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="barogging@email.com" autoComplete="email" /></label>
-        <label>비밀번호<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="비밀번호 입력" autoComplete="current-password" /></label>
-        <div className="login-options"><label><input type="checkbox" /> 로그인 유지</label><button type="button">비밀번호 찾기</button></div>
+        <label>비밀번호<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder={mode === "signup" ? "6자 이상 입력" : "비밀번호 입력"} autoComplete={mode === "signup" ? "new-password" : "current-password"} /></label>
+        {mode === "signup" && (
+          <label>비밀번호 확인<input value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} type="password" placeholder="비밀번호 다시 입력" autoComplete="new-password" /></label>
+        )}
+        {mode === "login" && <div className="login-options"><label><input type="checkbox" /> 로그인 유지</label><button type="button">비밀번호 찾기</button></div>}
         {error && <p className="login-error">{error}</p>}
-        <button className="login-button" type="submit">로그인</button>
-        <button className="demo-login" type="button" onClick={() => onLogin(nickname.trim() || "바다러너", email.trim() || "barogging@email.com")}>체험 계정으로 시작하기</button>
-        <p className="signup-copy">바로깅이 처음인가요? <button type="button">회원가입</button></p>
+        <button className="login-button" type="submit">{mode === "signup" ? "회원가입하고 시작하기" : "로그인"}</button>
+        {mode === "login" && <button className="demo-login" type="button" onClick={() => onLogin("바다러너", "barogging@email.com")}>체험 계정으로 시작하기</button>}
+        <p className="signup-copy">
+          {mode === "signup" ? "이미 계정이 있나요?" : "바로깅이 처음인가요?"}
+          {" "}
+          <button type="button" onClick={switchMode}>{mode === "signup" ? "로그인" : "회원가입"}</button>
+        </p>
       </form>
     </div>
   );
@@ -1079,6 +1224,7 @@ export default function Home() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [groups, setGroups] = useState<GroupData[]>(initialGroups);
   const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>([]);
+  const [activityRecordsReady, setActivityRecordsReady] = useState(false);
   const [unrewardedDistance, setUnrewardedDistance] = useState(0);
   const [claimedDays, setClaimedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const [attendanceReady, setAttendanceReady] = useState(false);
@@ -1131,6 +1277,18 @@ export default function Home() {
     }
   }, [purchaseHistoryReady, purchaseHistory]);
 
+  useEffect(() => {
+    if (!loggedIn || !activityRecordsReady) return;
+    try {
+      window.localStorage.setItem(
+        activityRecordsStorageKey(profile.email),
+        JSON.stringify(activityRecords),
+      );
+    } catch {
+      // 저장소가 차단된 환경에서는 현재 접속 중인 활동 기록만 유지합니다.
+    }
+  }, [activityRecords, activityRecordsReady, loggedIn, profile.email]);
+
   const todayDistance = activityRecords.reduce((sum, record) => sum + record.distance, 0);
   const todaySeconds = activityRecords.reduce((sum, record) => sum + record.elapsedSeconds, 0);
 
@@ -1172,6 +1330,8 @@ export default function Home() {
       <div className="site-shell">
         <div className="phone"><LoginScreen onLogin={(name, email) => {
           setNickname(name);
+          setActivityRecords(readStoredActivityRecords(email));
+          setActivityRecordsReady(true);
           setProfile({
             nickname: name,
             phone: "",
@@ -1263,6 +1423,8 @@ export default function Home() {
             onClose={() => setProfileOpen(false)}
             onLogout={() => {
               setProfileOpen(false);
+              setActivityRecordsReady(false);
+              setActivityRecords([]);
               setLoggedIn(false);
             }}
           />

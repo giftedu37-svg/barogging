@@ -126,6 +126,18 @@ button { color: inherit; }
 .latest-session-card span { color: #438268; font-size: 7px; font-weight: 900; }
 .latest-session-card strong { margin-top: 5px; color: #173e3b; font-size: 11px; }
 .latest-session-card small { margin-top: 3px; color: #7c8b87; font-size: 7px; }
+.activity-session-section { margin-top: 10px; padding: 12px; border-radius: 14px; background: #edf3ed; }
+.activity-session-section .section-head { margin-bottom: 8px; }
+.activity-session-section .section-head h2 { font-size: 11px; }
+.activity-session-section .section-head small { color: #4a8a6e; font-size: 7px; font-weight: 900; }
+.activity-session-list { display: grid; gap: 6px; max-height: 160px; overflow-y: auto; }
+.activity-session-list article { display: grid; grid-template-columns: 1.15fr .8fr 1fr; align-items: center; gap: 7px; padding: 9px; border-radius: 11px; background: white; }
+.activity-session-list article > div strong, .activity-session-list article > div small, .activity-session-list article > span b, .activity-session-list article > span small { display: block; }
+.activity-session-list article > div strong { color: #2f7359; font-size: 11px; }
+.activity-session-list article > div small { margin-top: 3px; color: #8a9692; font-size: 6px; }
+.activity-session-list article > span { padding-left: 7px; border-left: 1px solid #e1e7e2; }
+.activity-session-list article > span b { color: #425f57; font-size: 8px; white-space: nowrap; }
+.activity-session-list article > span small { margin-top: 3px; color: #929d99; font-size: 6px; }
 .section-block { margin-top: 22px; }
 .section-head { display: flex; align-items: center; justify-content: space-between; }
 .section-head h2 { margin: 0; font-size: 15px; letter-spacing: -.045em; }
@@ -493,6 +505,10 @@ button { color: inherit; }
 .login-wave i { width: 8px; height: 8px; left: 62px; top: 56px; }.login-wave b { width: 13px; height: 13px; right: 72px; top: 26px; }
 .login-card { flex: 1; position: relative; z-index: 4; margin-top: -40px; padding: 25px 24px 28px; border-radius: 28px 28px 0 0; background: var(--paper); color: var(--ink); }
 .login-card h2 { margin: 4px 0 18px; font-size: 20px; letter-spacing: -.05em; }
+.login-card.signup-mode { padding-top: 20px; }
+.login-card.signup-mode h2 { margin-bottom: 10px; font-size: 18px; }
+.login-card.signup-mode > label { margin-top: 7px; }
+.login-card.signup-mode > label input { padding: 10px 12px; }
 .login-card > label { display: block; margin-top: 10px; color: #6e7e7a; font-size: 8px; font-weight: 800; }
 .login-card > label input { width: 100%; display: block; margin-top: 5px; padding: 12px; border: 1px solid #dce2da; border-radius: 11px; background: white; color: var(--ink); outline: none; font-size: 10px; }
 .login-card > label input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(79,158,125,.1); }
