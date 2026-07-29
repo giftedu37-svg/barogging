@@ -265,7 +265,7 @@ function calculateActivityMetrics(
   gpsDistance: number,
 ) {
   const gpsSteps = gpsStatus === "active" ? Math.floor(gpsDistance * 1400) : 0;
-  const steps = motionStatus === "active" ? motionSteps : gpsSteps;
+  const steps = motionStatus === "active" ? Math.max(motionSteps, gpsSteps) : gpsSteps;
   return {
     steps,
     distance: Math.floor(steps / 14) / 100,
@@ -1029,9 +1029,7 @@ function ActivityModal({
   const motionFallbackTimerRef = useRef<number | null>(null);
   const motionBaselineRef = useRef(9.81);
   const motionFilteredRef = useRef(0);
-  const motionPeakReadyRef = useRef(true);
-  const lastMotionCandidateAtRef = useRef(0);
-  const walkingCadenceRef = useRef(false);
+  const lastMotionStepAtRef = useRef(0);
 
   useEffect(() => {
     if (!recording) return;
@@ -1104,9 +1102,7 @@ function ActivityModal({
     setMotionSteps(0);
     motionBaselineRef.current = 9.81;
     motionFilteredRef.current = 0;
-    motionPeakReadyRef.current = true;
-    lastMotionCandidateAtRef.current = 0;
-    walkingCadenceRef.current = false;
+    lastMotionStepAtRef.current = 0;
 
     const MotionEvent = window.DeviceMotionEvent as (typeof DeviceMotionEvent & {
       requestPermission?: () => Promise<"granted" | "denied">;
@@ -1135,14 +1131,15 @@ function ActivityModal({
     const handleMotion = (event: DeviceMotionEvent) => {
       const direct = event.acceleration;
       const includingGravity = event.accelerationIncludingGravity;
-      const hasDirectAcceleration = direct
-        && direct.x !== null
-        && direct.y !== null
-        && direct.z !== null;
-      const source = hasDirectAcceleration
-        ? direct
-        : includingGravity;
-      if (!source || source.x === null || source.y === null || source.z === null) return;
+      const directValues = [direct?.x, direct?.y, direct?.z];
+      const gravityValues = [includingGravity?.x, includingGravity?.y, includingGravity?.z];
+      const hasDirectAcceleration = directValues.every(
+        (value) => typeof value === "number" && Number.isFinite(value),
+      );
+      const sourceValues = hasDirectAcceleration ? directValues : gravityValues;
+      if (!sourceValues.every(
+        (value) => typeof value === "number" && Number.isFinite(value),
+      )) return;
 
       if (motionStatusRef.current !== "active") {
         updateMotionStatus("active");
@@ -1152,31 +1149,24 @@ function ActivityModal({
         }
       }
 
-      const magnitude = Math.sqrt(source.x ** 2 + source.y ** 2 + source.z ** 2);
+      const [x, y, z] = sourceValues as [number, number, number];
+      const magnitude = Math.sqrt(x ** 2 + y ** 2 + z ** 2);
       let movementSignal = magnitude;
-      if (source === includingGravity) {
-        motionBaselineRef.current = motionBaselineRef.current * 0.9 + magnitude * 0.1;
+      if (!hasDirectAcceleration) {
+        motionBaselineRef.current = motionBaselineRef.current * 0.92 + magnitude * 0.08;
         movementSignal = Math.abs(magnitude - motionBaselineRef.current);
       }
-      motionFilteredRef.current = motionFilteredRef.current * 0.65 + movementSignal * 0.35;
+      motionFilteredRef.current = motionFilteredRef.current * 0.55 + movementSignal * 0.45;
 
-      if (motionFilteredRef.current < 0.42) {
-        motionPeakReadyRef.current = true;
-      }
-      if (!motionPeakReadyRef.current || motionFilteredRef.current < 0.9) return;
-
-      motionPeakReadyRef.current = false;
       const now = window.performance.now();
-      const gap = now - lastMotionCandidateAtRef.current;
-      if (gap >= 280 && gap <= 1300) {
-        const increment = walkingCadenceRef.current ? 1 : 2;
-        walkingCadenceRef.current = true;
-        motionStepCountRef.current += increment;
+      if (
+        motionFilteredRef.current >= 0.45
+        && now - lastMotionStepAtRef.current >= 320
+      ) {
+        lastMotionStepAtRef.current = now;
+        motionStepCountRef.current += 1;
         setMotionSteps(motionStepCountRef.current);
-      } else if (gap > 1300) {
-        walkingCadenceRef.current = false;
       }
-      lastMotionCandidateAtRef.current = now;
     };
 
     motionListenerRef.current = handleMotion;
