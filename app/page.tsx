@@ -111,8 +111,8 @@ function PloggingScreen({ onStart, attendanceCount }: { onStart: (mode: Mode) =>
           <div><strong>{attendanceCount}일 연속 플로깅 중!</strong><small>이번 달 {attendanceCount}일 참여했어요</small></div>
         </div>
         <div className="week-row">
-          {["월", "화", "수", "목", "금", "토", "일"].map((day, i) => (
-            <span key={day} className={i < 6 ? "done" : ""}><i>{i < 6 ? "✓" : "·"}</i>{day}</span>
+          {["월", "화", "수", "목", "금", "토", "일"].map((day) => (
+            <span key={day}>{day}</span>
           ))}
         </div>
       </section>
@@ -266,7 +266,6 @@ function MapScreen({ onCamera }: { onCamera: () => void }) {
       </div>
       <section className={`map-canvas map-view-${selected}`}>
         <iframe key={bin.id} title={`${bin.name} 주변 지도`} src={bin.mapUrl}></iframe>
-        <span className="map-center-marker"><b>♲</b><small>{bin.name}</small></span>
         <span className="map-source">OpenStreetMap</span>
       </section>
       <section className="bin-panel">
@@ -297,7 +296,7 @@ function RewardsScreen({
   onAttendance: (day: number) => void;
 }) {
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const today = 28;
+  const today = 29;
   const rewards = [
     { icon: "♨", className: "coffee", name: "카페 음료 쿠폰", price: 2000, items: [{ name: "카페 음료 5천원권", detail: "제휴 카페 5,000원 이용권", price: 2000 }, { name: "카페 음료 1만원권", detail: "제휴 카페 10,000원 이용권", price: 4000 }, { name: "카페 음료 3만원권", detail: "제휴 카페 30,000원 이용권", price: 6000 }] },
     { icon: "▱", className: "bag", name: "친환경 마켓 쿠폰", price: 2000, items: [{ name: "친환경 마켓 5천원권", detail: "친환경 상품 5,000원 이용권", price: 2000 }, { name: "친환경 마켓 1만원권", detail: "친환경 상품 10,000원 이용권", price: 4000 }, { name: "친환경 마켓 3만원권", detail: "친환경 상품 30,000원 이용권", price: 6000 }] },

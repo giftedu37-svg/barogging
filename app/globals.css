@@ -106,9 +106,7 @@ button { color: inherit; }
 .streak-card strong { display: block; font-size: 12px; }
 .streak-card small { display: block; color: #9fb9b4; font-size: 9px; margin-top: 3px; }
 .week-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
-.week-row span { font-size: 8px; color: #78928e; text-align: center; display: grid; gap: 4px; }
-.week-row i { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; margin: auto; border: 1px solid #456461; font-style: normal; }
-.week-row .done { color: #cce6df; }.week-row .done i { background: #69af8e; border-color: #69af8e; color: white; }
+.week-row span { padding: 6px 0; border-radius: 8px; background: rgba(255,255,255,.08); color: #cce2dc; font-size: 8px; text-align: center; }
 .mini-tip { margin-top: 12px; padding: 10px 12px; border: 1px solid #e6e8df; border-radius: 13px; }
 .mini-tip span { font-size: 9px; font-weight: 800; color: var(--coral); }
 .mini-tip p { margin: 4px 0 0; font-size: 10px; color: #677b79; }
@@ -205,9 +203,6 @@ button { color: inherit; }
 .map-canvas::after { content: ""; position: absolute; left: -73px; top: -35px; width: 165px; height: 390px; border-radius: 46% 54% 50% 42%; background: #9fd2d0; border-right: 9px solid rgba(255,255,255,.68); z-index: 0; }
 .map-canvas:has(iframe)::after { display: none; }
 .map-canvas > iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; filter: saturate(.82) contrast(.98); }
-.map-center-marker { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-.map-center-marker b { width: 37px; height: 37px; border-radius: 50% 50% 50% 8px; transform: rotate(-45deg); display: grid; place-items: center; background: var(--coral); color: white; box-shadow: 0 5px 14px rgba(28,62,54,.28); font-size: 16px; }
-.map-center-marker small { margin-top: 8px; white-space: nowrap; color: #173e3b; background: rgba(255,255,255,.94); border-radius: 9px; padding: 4px 7px; font-size: 7px; font-weight: 800; box-shadow: 0 2px 7px rgba(0,0,0,.12); }
 .map-source { position: absolute; right: 4px; bottom: 3px; z-index: 5; color: #53645f; background: rgba(255,255,255,.84); padding: 2px 4px; border-radius: 3px; font-size: 6px; }
 .map-moving-layer { position: absolute; inset: -30px; z-index: 1; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
 .map-view-1 .map-moving-layer { transform: translate(0,0); }
