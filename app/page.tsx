@@ -159,6 +159,18 @@ function calculateGpsDistance(
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
+function calculateActivityMetrics(elapsedSeconds: number, gpsStatus: GpsStatus, gpsDistance: number) {
+  const timeBasedSteps = elapsedSeconds * 2;
+  const gpsBasedSteps = Math.floor(gpsDistance * 1400);
+  const steps = gpsStatus === "active"
+    ? Math.max(timeBasedSteps, gpsBasedSteps)
+    : timeBasedSteps;
+  return {
+    steps,
+    distance: Math.floor(steps / 14) / 100,
+  };
+}
+
 function Header({ points, onAccount }: { points: number; onAccount: () => void }) {
   return (
     <header className="topbar">
@@ -895,10 +907,18 @@ function ActivityModal({
   const [gpsDistance, setGpsDistance] = useState(0);
   const gpsWatchIdRef = useRef<number | null>(null);
   const previousGpsPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!recording) return;
-    const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
+    const updateElapsed = () => {
+      if (recordingStartedAtRef.current === null) return;
+      setElapsed(Math.max(0, Math.floor(
+        (window.performance.now() - recordingStartedAtRef.current) / 1000,
+      )));
+    };
+    updateElapsed();
+    const timer = window.setInterval(updateElapsed, 200);
     return () => window.clearInterval(timer);
   }, [recording]);
 
@@ -908,12 +928,11 @@ function ActivityModal({
     }
   }, []);
 
-  const timeBasedSteps = elapsed * 2;
-  const gpsBasedSteps = Math.floor(gpsDistance * 1400);
-  const measuredSteps = gpsStatus === "active"
-    ? Math.max(timeBasedSteps, gpsBasedSteps)
-    : timeBasedSteps;
-  const measuredDistance = Math.floor(measuredSteps / 14) / 100;
+  const { steps: measuredSteps, distance: measuredDistance } = calculateActivityMetrics(
+    elapsed,
+    gpsStatus,
+    gpsDistance,
+  );
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const gpsStatusLabel: Record<GpsStatus, string> = {
     idle: "GPS 준비",
@@ -1070,16 +1089,24 @@ function ActivityModal({
           onClick={() => {
             if (!recording) {
               setElapsed(0);
+              recordingStartedAtRef.current = window.performance.now();
               startGpsTracking();
               setRecording(true);
             } else {
+              const finalElapsed = recordingStartedAtRef.current === null
+                ? elapsed
+                : Math.max(0, Math.floor(
+                  (window.performance.now() - recordingStartedAtRef.current) / 1000,
+                ));
+              const finalMetrics = calculateActivityMetrics(finalElapsed, gpsStatus, gpsDistance);
               stopGpsTracking();
               setRecording(false);
+              recordingStartedAtRef.current = null;
               onCompleteActivity({
                 id: Date.now(),
-                distance: measuredDistance,
-                elapsedSeconds: elapsed,
-                steps: measuredSteps,
+                distance: finalMetrics.distance,
+                elapsedSeconds: finalElapsed,
+                steps: finalMetrics.steps,
                 createdAt: new Date().toLocaleString("ko-KR", {
                   month: "long",
                   day: "numeric",
