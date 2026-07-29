@@ -1195,7 +1195,7 @@ function ActivityModal({
           <span><i>시간</i><b>{measuredTime}</b></span>
           <span><i>걸음 수</i><b>{measuredSteps.toLocaleString()}</b></span>
         </div>
-        <p className="distance-rule">{recording ? "GPS에서 실제 이동이 확인될 때만 걸음 수와 거리가 기록돼요." : "정지 상태에서는 걸음 수 0 · 14걸음마다 0.01km"}</p>
+        <p className="distance-rule">{recording ? "GPS에서 실제 이동이 확인될 때만 걸음 수와 거리가 기록돼요." : "정지 상태에서는 걸음 수 0"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
