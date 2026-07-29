@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const staticBasePath = process.env.GITHUB_PAGES === "true" ? "/barogging" : "";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://padojoop-plogging.workspace-925535.chatgpt.site"),
   title: "바로깅 | 플로깅 리워드",
   description: "플로깅과 스마트 쓰레기통을 연결하는 해양 환경 리워드 서비스",
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  icons: { icon: `${staticBasePath}/favicon.svg`, shortcut: `${staticBasePath}/favicon.svg` },
   openGraph: {
     title: "바로깅 | 걷고, 줍고, 바다를 바꾸다",
     description: "플로깅과 스마트 쓰레기통을 연결하는 해양 환경 리워드 서비스",
