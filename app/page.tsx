@@ -68,6 +68,25 @@ const communityRoutes = [
   { id: 3, title: "송정 파도 따라 걷기", area: "해운대 · 송정", distance: "5.1km", time: "1시간 12분", bins: 5, author: "파도맘", avatar: "파", likes: 156, tone: "blue", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.191%2C35.171%2C129.211%2C35.184&layer=mapnik&marker=35.1787%2C129.1998" },
   { id: 4, title: "이기대 해안 산책길", area: "남구 · 이기대", distance: "6.8km", time: "1시간 38분", bins: 3, author: "초록발걸음", avatar: "초", likes: 132, tone: "sand", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.115%2C35.117%2C129.135%2C35.135&layer=mapnik&marker=35.1268%2C129.1237" },
 ];
+const routeLikesStorageKey = "barogging-liked-route-ids";
+
+function readStoredRouteLikes() {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = window.localStorage.getItem(routeLikesStorageKey);
+    if (!saved) return [];
+
+    const storedRouteIds = JSON.parse(saved);
+    const validRouteIds = new Set(communityRoutes.map((route) => route.id));
+    return Array.isArray(storedRouteIds)
+      ? [...new Set(storedRouteIds.filter((id): id is number => (
+        typeof id === "number" && validRouteIds.has(id)
+      )))]
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 function calculateGpsDistance(
   previous: { latitude: number; longitude: number },
@@ -151,8 +170,12 @@ function PloggingScreen({ onStart, attendanceCount }: { onStart: (mode: Mode) =>
 function RecordsScreen({ nickname, activityRecords }: { nickname: string; activityRecords: ActivityRecord[] }) {
   const [ranking, setRanking] = useState<Mode>("group");
   const [metric, setMetric] = useState<RankMetric>("distance");
-  const [routes, setRoutes] = useState(communityRoutes);
-  const [likedRouteIds, setLikedRouteIds] = useState<number[]>([]);
+  const [likedRouteIds, setLikedRouteIds] = useState<number[]>(readStoredRouteLikes);
+  const [routes, setRoutes] = useState(() => communityRoutes.map((route) => (
+    likedRouteIds.includes(route.id)
+      ? { ...route, likes: route.likes + 1 }
+      : route
+  )));
   const [courseOpen, setCourseOpen] = useState(false);
   const [detailRoute, setDetailRoute] = useState<(typeof communityRoutes)[number] | null>(null);
   const ranks = ranking === "group" ? groupRank : soloRank;
@@ -161,6 +184,15 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
   const addedSteps = activityRecords.reduce((sum, record) => sum + record.steps, 0);
   const totalSeconds = 8 * 3600 + 42 * 60 + addedSeconds;
   const totalTime = `${String(Math.floor(totalSeconds / 3600)).padStart(2, "0")}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0")}`;
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(routeLikesStorageKey, JSON.stringify(likedRouteIds));
+    } catch {
+      // 저장소가 차단된 환경에서는 현재 접속 중인 좋아요 상태를 유지합니다.
+    }
+  }, [likedRouteIds]);
+
   const toggleRouteLike = (routeId: number) => {
     const isLiked = likedRouteIds.includes(routeId);
     setLikedRouteIds((current) => isLiked ? current.filter((id) => id !== routeId) : [...current, routeId]);
@@ -235,7 +267,7 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
                     className={`route-like-button ${likedRouteIds.includes(route.id) ? "liked" : ""}`}
                     onClick={() => toggleRouteLike(route.id)}
                     aria-pressed={likedRouteIds.includes(route.id)}
-                    aria-label={`${route.title} 좋아요`}
+                    aria-label={`${route.title} 좋아요 ${likedRouteIds.includes(route.id) ? "취소" : "누르기"}, 현재 ${route.likes}개`}
                   >
                     {likedRouteIds.includes(route.id) ? "♥" : "♡"} {route.likes}
                   </button>
