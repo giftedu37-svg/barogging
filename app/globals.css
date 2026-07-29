@@ -150,7 +150,7 @@ button { color: inherit; }
 .community-route { border-radius: 16px; overflow: hidden; border: 1px solid #e3e7df; background: white; display: grid; grid-template-columns: 34% 66%; min-height: 118px; }
 .community-route .route-map { min-height: 118px; }
 .community-route .route-map::after { display: none; }
-.community-route .route-map iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; filter: saturate(.8) contrast(.96); }
+.community-route .route-map iframe { position: absolute; left: 0; top: -12px; width: 100%; height: calc(100% + 24px); border: 0; pointer-events: none; filter: saturate(.8) contrast(.96); }
 .community-route .route-map.coral { background: linear-gradient(130deg,#f5d7ca,#f8eadf); }
 .community-route .route-map.blue { background: linear-gradient(130deg,#cfe6e7,#e5f2ec); }
 .community-route .route-map.sand { background: linear-gradient(130deg,#eadfc3,#f2ebdb); }
@@ -159,7 +159,7 @@ button { color: inherit; }
 .mr1 { left: 12px; top: 34px; transform: rotate(22deg); }.mr2 { left: 34px; top: 74px; transform: rotate(-35deg); }
 .mini-block { position: absolute; z-index: 0; background: rgba(240,237,225,.86); border: 1px solid rgba(170,170,158,.35); }
 .mb1 { width: 35px; height: 25px; right: 7px; top: 10px; }.mb2 { width: 43px; height: 30px; left: 40px; bottom: 6px; }
-.mini-map-label { position: absolute; z-index: 4; right: 5px; bottom: 5px; color: #58716a; background: rgba(255,255,255,.8); border-radius: 4px; padding: 2px 4px; font-size: 6px; font-weight: 800; }
+.mini-map-label { position: absolute; z-index: 4; right: 5px; bottom: 5px; color: #58716a; background: rgba(255,255,255,.9); border-radius: 4px; padding: 2px 4px; font-size: 6px; font-weight: 800; }
 .course-upload-button { color: #34775a; background: #e1f0e7; border-radius: 20px; padding: 5px 8px; font-weight: 800; }
 .route-author { display: flex; align-items: center; gap: 5px; }
 .route-author > span { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; background: #dcece3; color: #38795d; font-size: 7px; font-weight: 800; }
@@ -454,8 +454,9 @@ button { color: inherit; }
 .course-form input { width: 100%; display: block; margin-top: 4px; border: 1px solid #dce2da; border-radius: 9px; padding: 9px 8px; outline: none; background: white; color: var(--ink); font-size: 8px; }
 .course-form input:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(79,158,125,.1); }
 .course-detail-modal { width: 100%; max-height: 92%; overflow-y: auto; background: var(--paper); border-radius: 26px 26px 0 0; padding: 22px 20px 26px; position: relative; animation: slideUp .35s ease; }
-.detail-map { height: 185px; margin: 9px 0 14px; overflow: hidden; border: 1px solid #d8ded7; border-radius: 17px; background: #e6ece7; }
-.detail-map iframe { width: 100%; height: 100%; border: 0; }
+.detail-map { height: 185px; margin: 9px 0 14px; overflow: hidden; border: 1px solid #d8ded7; border-radius: 17px; background: #e6ece7; position: relative; }
+.detail-map iframe { position: absolute; left: 0; top: -14px; width: 100%; height: calc(100% + 28px); border: 0; }
+.detail-map-source { position: absolute; z-index: 3; right: 7px; bottom: 6px; padding: 2px 5px; border-radius: 4px; background: rgba(255,255,255,.9); color: #596a65; font-size: 6px; }
 .detail-author { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
 .detail-author > span { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 12px; background: #deeee5; font-size: 17px; }
 .detail-author strong, .detail-author small { display: block; }
@@ -477,6 +478,8 @@ button { color: inherit; }
 .course-guide li small { margin-top: 3px; color: #87938f; font-size: 7px; line-height: 1.45; }
 .route-actions { display: flex; align-items: center; gap: 5px; margin-top: 6px; }
 .route-actions button { border: 1px solid #d8e1da; border-radius: 8px; background: white; color: #3f7964; padding: 5px 8px; font-size: 7px; font-weight: 800; cursor: pointer; }
+.route-actions .route-like-button { margin-right: auto; min-width: 42px; color: #7a8b87; background: #f7f8f4; }
+.route-actions .route-like-button.liked { border-color: #f0b9ad; color: #e46450; background: #fff1ed; }
 .route-actions button:last-child { background: #4f9e7d; border-color: #4f9e7d; color: white; }
 .login-screen { min-height: 100%; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #173e3b; color: white; }
 .login-brand { padding: 57px 28px 0; position: relative; z-index: 3; }

@@ -152,6 +152,7 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
   const [ranking, setRanking] = useState<Mode>("group");
   const [metric, setMetric] = useState<RankMetric>("distance");
   const [routes, setRoutes] = useState(communityRoutes);
+  const [likedRouteIds, setLikedRouteIds] = useState<number[]>([]);
   const [courseOpen, setCourseOpen] = useState(false);
   const [detailRoute, setDetailRoute] = useState<(typeof communityRoutes)[number] | null>(null);
   const ranks = ranking === "group" ? groupRank : soloRank;
@@ -160,6 +161,15 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
   const addedSteps = activityRecords.reduce((sum, record) => sum + record.steps, 0);
   const totalSeconds = 8 * 3600 + 42 * 60 + addedSeconds;
   const totalTime = `${String(Math.floor(totalSeconds / 3600)).padStart(2, "0")}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0")}`;
+  const toggleRouteLike = (routeId: number) => {
+    const isLiked = likedRouteIds.includes(routeId);
+    setLikedRouteIds((current) => isLiked ? current.filter((id) => id !== routeId) : [...current, routeId]);
+    setRoutes((current) => current.map((route) => (
+      route.id === routeId
+        ? { ...route, likes: Math.max(0, route.likes + (isLiked ? -1 : 1)) }
+        : route
+    )));
+  };
   return (
     <main className="screen">
       <section className="page-title">
@@ -213,7 +223,7 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
             <article className="community-route" key={route.id}>
               <div className={`route-map ${route.tone}`}>
                 <iframe title={`${route.title} 지도`} src={route.mapUrl} loading="lazy" tabIndex={-1}></iframe>
-                <small className="mini-map-label">{route.area.split(" · ")[1]} · 실제 지도</small>
+                <small className="mini-map-label">© OpenStreetMap</small>
                 {index === 0 && <b>인기</b>}
               </div>
               <div className="route-info">
@@ -221,7 +231,14 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
                 <h3>{route.title}</h3>
                 <p>{route.distance} · 약 {route.time} · 수거함 {route.bins}개</p>
                 <div className="route-actions">
-                  <span>♡ {route.likes}</span>
+                  <button
+                    className={`route-like-button ${likedRouteIds.includes(route.id) ? "liked" : ""}`}
+                    onClick={() => toggleRouteLike(route.id)}
+                    aria-pressed={likedRouteIds.includes(route.id)}
+                    aria-label={`${route.title} 좋아요`}
+                  >
+                    {likedRouteIds.includes(route.id) ? "♥" : "♡"} {route.likes}
+                  </button>
                   <button onClick={() => setDetailRoute(route)}>자세히</button>
                   <button onClick={() => alert(`${route.title} 코스 링크를 복사했어요!`)}>공유 ↗</button>
                 </div>
@@ -724,7 +741,10 @@ function CourseDetailModal({ route, onClose }: { route: (typeof communityRoutes)
     <div className="modal-backdrop">
       <div className="course-detail-modal">
         <button className="modal-close" onClick={onClose}>×</button>
-        <div className="detail-map"><iframe title={`${route.title} 상세 지도`} src={route.mapUrl}></iframe></div>
+        <div className="detail-map">
+          <iframe title={`${route.title} 상세 지도`} src={route.mapUrl}></iframe>
+          <small className="detail-map-source">© OpenStreetMap</small>
+        </div>
         <div className="detail-author"><span>{route.avatar}</span><div><strong>{route.author}님의 추천 코스</strong><small>{route.area}</small></div></div>
         <h2>{route.title}</h2>
         <div className="detail-stats">
