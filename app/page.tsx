@@ -24,6 +24,7 @@ type ProfileData = {
   email: string;
   region: string;
 };
+type GpsStatus = "idle" | "connecting" | "active" | "denied" | "unavailable";
 type GroupData = {
   id: number;
   name: string;
@@ -67,6 +68,22 @@ const communityRoutes = [
   { id: 3, title: "송정 파도 따라 걷기", area: "해운대 · 송정", distance: "5.1km", time: "1시간 12분", bins: 5, author: "파도맘", avatar: "파", likes: 156, tone: "blue", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.191%2C35.171%2C129.211%2C35.184&layer=mapnik&marker=35.1787%2C129.1998" },
   { id: 4, title: "이기대 해안 산책길", area: "남구 · 이기대", distance: "6.8km", time: "1시간 38분", bins: 3, author: "초록발걸음", avatar: "초", likes: 132, tone: "sand", mapUrl: "https://www.openstreetmap.org/export/embed.html?bbox=129.115%2C35.117%2C129.135%2C35.135&layer=mapnik&marker=35.1268%2C129.1237" },
 ];
+
+function calculateGpsDistance(
+  previous: { latitude: number; longitude: number },
+  current: { latitude: number; longitude: number },
+) {
+  const earthRadiusKm = 6371;
+  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+  const latitudeDelta = toRadians(current.latitude - previous.latitude);
+  const longitudeDelta = toRadians(current.longitude - previous.longitude);
+  const previousLatitude = toRadians(previous.latitude);
+  const currentLatitude = toRadians(current.latitude);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(previousLatitude) * Math.cos(currentLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
 
 function Header({ points, onAccount }: { points: number; onAccount: () => void }) {
   return (
@@ -724,6 +741,11 @@ function ActivityModal({
   const [groupMax, setGroupMax] = useState(10);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
+  const [gpsPosition, setGpsPosition] = useState<{ latitude: number; longitude: number; accuracy: number } | null>(null);
+  const [gpsDistance, setGpsDistance] = useState(0);
+  const gpsWatchIdRef = useRef<number | null>(null);
+  const previousGpsPositionRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     if (!recording) return;
@@ -731,9 +753,71 @@ function ActivityModal({
     return () => window.clearInterval(timer);
   }, [recording]);
 
-  const measuredDistance = elapsed * 0.0032;
+  useEffect(() => () => {
+    if (gpsWatchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+    }
+  }, []);
+
+  const estimatedDistance = elapsed * 0.0032;
   const measuredSteps = elapsed * 2;
   const measuredTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+  const gpsStatusLabel: Record<GpsStatus, string> = {
+    idle: "GPS 준비",
+    connecting: "GPS 연결 중",
+    active: "GPS 연결됨",
+    denied: "위치 권한 필요",
+    unavailable: "GPS 사용 불가",
+  };
+
+  const startGpsTracking = () => {
+    setGpsPosition(null);
+    setGpsDistance(0);
+    previousGpsPositionRef.current = null;
+
+    if (!navigator.geolocation) {
+      setGpsStatus("unavailable");
+      return;
+    }
+
+    setGpsStatus("connecting");
+    gpsWatchIdRef.current = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        const current = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: coords.accuracy,
+        };
+        setGpsPosition(current);
+        setGpsStatus("active");
+
+        const previous = previousGpsPositionRef.current;
+        if (previous) {
+          const segmentDistance = calculateGpsDistance(previous, current);
+          const minimumMovement = Math.max(0.003, coords.accuracy / 2000);
+          if (coords.accuracy <= 100 && segmentDistance >= minimumMovement && segmentDistance <= 0.2) {
+            setGpsDistance((distance) => distance + segmentDistance);
+          }
+        }
+        previousGpsPositionRef.current = current;
+      },
+      (error) => {
+        setGpsStatus(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable");
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 10000,
+      },
+    );
+  };
+
+  const stopGpsTracking = () => {
+    if (gpsWatchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+      gpsWatchIdRef.current = null;
+    }
+  };
 
   const createGroup = () => {
     if (!groupName.trim() || !groupPlace.trim() || !groupTime) {
@@ -807,18 +891,36 @@ function ActivityModal({
         <h2>혼자 플로깅</h2>
         <p>현재 위치에서 바로 기록을 시작할까요?</p>
         {recording && <span className="recording-live"><i></i>측정 중</span>}
+        <div className={`gps-card gps-${gpsStatus}`}>
+          <div>
+            <span><i></i>{gpsStatusLabel[gpsStatus]}</span>
+            <small>
+              {gpsPosition
+                ? `현재 위치 ${gpsPosition.latitude.toFixed(5)}, ${gpsPosition.longitude.toFixed(5)}`
+                : gpsStatus === "idle"
+                  ? "측정을 시작하면 현재 위치를 확인해요."
+                  : gpsStatus === "denied"
+                    ? "휴대폰 설정에서 위치 권한을 허용해 주세요."
+                    : "휴대폰의 현재 위치를 찾고 있어요."}
+            </small>
+          </div>
+          {gpsPosition && <b>오차 약 {Math.round(gpsPosition.accuracy)}m</b>}
+        </div>
         <div className={`live-preview ${recording ? "is-recording" : ""}`}><span><i>거리</i><b>0.00 km</b></span><span><i>시간</i><b>{measuredTime}</b></span><span><i>걸음</i><b>0</b></span></div>
-        <p className="distance-rule">{recording ? "거리와 걸음 수는 종료 후 기록에 반영돼요." : "달린 거리 × 10P · 1km부터 적립"}</p>
+        <p className="distance-rule">{recording ? "GPS 거리와 걸음 수는 종료 후 기록에 반영돼요." : "GPS로 이동 거리 측정 · 1km당 10P"}</p>
         <button
           className={`primary-button ${recording ? "stop-recording" : ""}`}
           onClick={() => {
             if (!recording) {
+              setElapsed(0);
+              startGpsTracking();
               setRecording(true);
             } else {
+              stopGpsTracking();
               setRecording(false);
               onCompleteActivity({
                 id: Date.now(),
-                distance: measuredDistance,
+                distance: gpsDistance > 0 ? gpsDistance : estimatedDistance,
                 elapsedSeconds: elapsed,
                 steps: measuredSteps,
                 createdAt: "오늘",

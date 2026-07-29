@@ -357,6 +357,19 @@ button { color: inherit; }
 .live-preview.is-recording { background: #e4f1e9; box-shadow: 0 0 0 1px #bcdccf; }
 .recording-live { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: #d65d4b; font-size: 8px; font-weight: 800; }
 .recording-live i { width: 7px; height: 7px; border-radius: 50%; background: #ef654f; box-shadow: 0 0 0 4px rgba(239,101,79,.14); animation: pulse 1.2s infinite; }
+.gps-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 13px 0 10px; padding: 10px 11px; border: 1px solid #dce5de; border-radius: 12px; background: #f5f7f2; text-align: left; }
+.gps-card > div { min-width: 0; }
+.gps-card span { display: flex; align-items: center; gap: 5px; color: #70807b; font-size: 9px; font-weight: 800; }
+.gps-card span i { width: 7px; height: 7px; border-radius: 50%; background: #a2aaa6; }
+.gps-card small { display: block; max-width: 220px; margin-top: 4px; overflow: hidden; color: #8a9692; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.gps-card b { flex: 0 0 auto; color: #668078; font-size: 7px; }
+.gps-card.gps-connecting span i { background: #edaa4e; box-shadow: 0 0 0 3px rgba(237,170,78,.14); animation: pulse 1.2s infinite; }
+.gps-card.gps-active { border-color: #bcdccf; background: #eaf5ee; }
+.gps-card.gps-active span { color: #368363; }
+.gps-card.gps-active span i { background: #45a77d; box-shadow: 0 0 0 3px rgba(69,167,125,.14); }
+.gps-card.gps-denied, .gps-card.gps-unavailable { border-color: #efd5ce; background: #fff6f3; }
+.gps-card.gps-denied span, .gps-card.gps-unavailable span { color: #c05d4c; }
+.gps-card.gps-denied span i, .gps-card.gps-unavailable span i { background: #e0705c; }
 @keyframes pulse { 50% { opacity: .45; } }
 .primary-button.stop-recording { background: #d85f4e; }
 .distance-rule { margin: -8px 0 13px !important; color: #3d8d69 !important; font-size: 8px !important; font-weight: 800; }
