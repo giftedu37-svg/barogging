@@ -916,10 +916,12 @@ export default function Home() {
         <div className="phone"><LoginScreen onLogin={(name) => {
           setNickname(name);
           setClaimedDays([]);
+          setPurchaseHistory([]);
           try {
             window.localStorage.setItem("barogging-attendance-2026-07", "[]");
+            window.localStorage.setItem("barogging-purchase-history", "[]");
           } catch {
-            // 저장소가 차단되어도 현재 로그인에서는 출석 상태를 초기화합니다.
+            // 저장소가 차단되어도 현재 로그인에서는 출석과 이용내역을 초기화합니다.
           }
           setLoggedIn(true);
         }} /></div>
