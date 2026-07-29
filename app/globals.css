@@ -118,6 +118,7 @@ button { color: inherit; }
 .stat-grid > div:first-child { background: #d8eee4; }
 .stat-grid span { display: block; font-size: 8px; color: #71817d; margin-bottom: 8px; }
 .stat-grid strong { display: block; font-size: 16px; letter-spacing: -.04em; white-space: nowrap; }
+.stat-grid > div:nth-child(2) strong { font-size: 13px; letter-spacing: -.06em; }
 .stat-grid strong small { font-size: 8px; }
 .stat-grid > div > small { font-size: 7px; color: #8a9794; }
 .stat-grid em { position: absolute; right: 7px; top: 8px; font-size: 7px; font-style: normal; color: #3e9b6c; background: white; border-radius: 20px; padding: 2px 4px; }

@@ -269,6 +269,15 @@ function calculateActivityMetrics(elapsedSeconds: number, gpsStatus: GpsStatus, 
   };
 }
 
+function formatClockDuration(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  return [
+    Math.floor(safeSeconds / 3600),
+    Math.floor((safeSeconds % 3600) / 60),
+    safeSeconds % 60,
+  ].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
 function Header({ points, onAccount }: { points: number; onAccount: () => void }) {
   return (
     <header className="topbar">
@@ -348,7 +357,7 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
   const addedSeconds = activityRecords.reduce((sum, record) => sum + record.elapsedSeconds, 0);
   const addedSteps = activityRecords.reduce((sum, record) => sum + record.steps, 0);
   const totalSeconds = 8 * 3600 + 42 * 60 + addedSeconds;
-  const totalTime = `${String(Math.floor(totalSeconds / 3600)).padStart(2, "0")}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0")}`;
+  const totalTime = formatClockDuration(totalSeconds);
 
   useEffect(() => {
     try {
@@ -376,7 +385,7 @@ function RecordsScreen({ nickname, activityRecords }: { nickname: string; activi
 
       <div className="stat-grid">
         <div><span>이번 달</span><strong>{(28.4 + addedDistance).toFixed(2)} <small>km</small></strong><em>↑ 12%</em></div>
-        <div><span>누적 시간</span><strong>{totalTime}</strong><small>시간 : 분</small></div>
+        <div><span>누적 시간</span><strong>{totalTime}</strong><small>시간 : 분 : 초</small></div>
         <div><span>걸음 수</span><strong>{(42680 + addedSteps).toLocaleString()}</strong><small>걸음</small></div>
       </div>
 
@@ -805,6 +814,9 @@ function ProfileModal({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(profile);
   const nickname = profile.nickname;
+  const addedProfileDistance = activityRecords.reduce((sum, record) => sum + record.distance, 0);
+  const addedProfileSeconds = activityRecords.reduce((sum, record) => sum + record.elapsedSeconds, 0);
+  const profileTotalTime = formatClockDuration(26 * 3600 + 42 * 60 + addedProfileSeconds);
   const recordedActivities = activityRecords.map((record) => ({
     distance: `${record.distance.toFixed(2)}km`,
     title: "새로 저장한 바로깅",
@@ -832,8 +844,8 @@ function ProfileModal({
           <div><p>바다를 달리는 중</p><h2>{nickname} 님</h2><small>부산 바로거 · 2026년 3월부터</small></div>
         </div>
         <div className="account-stats">
-          <div><span>누적 거리</span><strong>128.6 km</strong></div>
-          <div><span>활동 시간</span><strong>26시간 42분</strong></div>
+          <div><span>누적 거리</span><strong>{(128.6 + addedProfileDistance).toFixed(2)} km</strong></div>
+          <div><span>활동 시간</span><strong>{profileTotalTime}</strong></div>
           <div><span>보유 포인트</span><strong>{points.toLocaleString()} P</strong></div>
         </div>
 
