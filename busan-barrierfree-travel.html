@@ -52,16 +52,50 @@
     ];
     let selected = new Set();
     const $ = id => document.getElementById(id);
-    function score(p, severity) { const distanceScore=Math.max(0,1-(p.dist/18)*(1+1.5*severity)); return Math.round((p.rating/5)*40 + 25 + distanceScore*20 + (p.indoor*severity+(1-severity)*.75)*10 + 5); }
+    // 기준 거리에서 출발역별 실제 권역 차이를 반영한 보정값(km)
+    // 네이버 지도 확인값(표 제공 데이터)을 관광지 순서대로 적용합니다.
+    const measuredDistances = [
+      {'해운대역':0.656,'부산역':21,'서면역':11,'남포역':23},
+      {'해운대역':1.4,'부산역':22,'서면역':12,'남포역':23},
+      {'해운대역':18,'부산역':37,'서면역':29,'남포역':39},
+      {'해운대역':27,'부산역':6,'서면역':11,'남포역':4},
+      {'해운대역':28,'부산역':10,'서면역':15,'남포역':8}
+    ];
+    function distanceFor(p, origin) { const i=places.indexOf(p); return measuredDistances[i]?.[origin] ?? p.dist; }
+    function score(p, severity, distance) {
+      const d=distance ?? p.dist;
+      const distanceScore=Math.max(0,1-(d/18)*(1+1.5*severity));
+      const ratingScore=(p.rating/5)*25;
+      // 날씨는 전체 점수를 낮추지 않고 거리 항목의 영향력만 증폭합니다.
+      const indoorScore=p.indoor*20;
+      const distanceWeight=distanceScore*35;
+      return Math.round(20 + ratingScore + distanceWeight + indoorScore);
+    }
+    function relativeRating(value, top) { return top ? Math.max(0, Math.min(5, +(value/top*5).toFixed(1))) : 0; }
+    function starMarkup(rating) { const full=Math.floor(rating), half=(rating-full>=0.5?1:0); return `${'★'.repeat(full)}${half?'½':''}${'☆'.repeat(Math.max(0,5-full-half))}`; }
     function render(){
       const sev=Number($('weatherSelect').value), need=$('need').value;
       const labels=['☀ 맑음','☁ 흐림','☂ 비','⚠ 강풍/호우']; const weatherIndex=[0,.35,.7,1].indexOf(sev);
       $('weatherText').textContent=`${labels[weatherIndex]} · 이동거리 가중치 ×${(1+1.5*sev).toFixed(1)}`;
-      const list=places.filter(p=>need==='all'||p.facilities.includes(need)).sort((a,b)=>score(b,sev)-score(a,sev));
-      $('places').innerHTML=list.map(p=>`<article class="card ${selected.has(p.name)?'selected':''}"><input class="check" type="checkbox" aria-label="${p.name} 선택" ${selected.has(p.name)?'checked':''} onchange="toggle('${p.name}')"><div><div><span class="card-title">${p.name}</span><span class="type">${p.type}</span></div><div class="meta">${$('origin').value} 기준 ${p.dist}km · 접근성 확인 완료</div><div>${p.labels.map(x=>`<span class="facility">${x}</span>`).join('')}</div><div class="links"><a href="${p.source}" target="_blank">관광지 정보 ↗</a><a href="${p.map}" target="_blank">네이버 지도 ↗</a></div></div><div class="score"><strong>${score(p,sev)}</strong><small>추천도 / 100</small></div></article>`).join('');
-      route(sev);
+      const origin=$('origin').value;
+      const list=places.filter(p=>need==='all'||p.facilities.includes(need)).sort((a,b)=>score(b,sev,distanceFor(b,origin))-score(a,sev,distanceFor(a,origin)));
+      list.forEach(p=>p.displayDistance=distanceFor(p,origin));
+      $('places').innerHTML=list.map(p=>`<article class="card ${selected.has(p.name)?'selected':''}"><input class="check" type="checkbox" aria-label="${p.name} 선택" ${selected.has(p.name)?'checked':''} onchange="toggle('${p.name}')"><div><div><span class="card-title">${p.name}</span><span class="type">${p.type}</span></div><div class="meta">${origin} 기준 ${p.displayDistance}km · 접근성 확인 완료</div><div>${p.labels.map(x=>`<span class="facility">${x}</span>`).join('')}</div><div class="links"><a href="${p.source}" target="_blank">관광지 정보 ↗</a><a href="${p.map}" target="_blank">네이버 지도 ↗</a></div></div><div class="score"><strong>${score(p,sev,p.displayDistance)}</strong><small>추천도 / 100</small></div></article>`).join('');
+      const topScore=list.length ? score(list[0],sev,list[0].displayDistance) : 0;
+      list.forEach((p,i)=>{ const card=$('places').children[i]; if(card){ const current=score(p,sev,p.displayDistance); const meta=card.querySelector('.meta'); if(meta) meta.textContent=`${origin} 기준 ${p.displayDistance}km · 접근성 확인 완료`; const scoreBox=card.querySelector('.score'); if(scoreBox){ const rel=relativeRating(current,topScore); scoreBox.innerHTML=`<strong aria-label="상대 추천도 ${rel}점">${starMarkup(rel)}</strong><small>${rel.toFixed(1)} / 5.0</small>`; } }});
+      route(sev,origin);
     }
     function route(sev){ const chosen=places.filter(p=>selected.has(p.name)); if(!chosen.length){$('routePanel').innerHTML='<div class="route-title"><h3>선택한 여행 코스</h3></div><div class="empty">왼쪽에서 여행지를 선택하세요.<br>추천도는 날씨가 나쁠수록 가까운 장소와 실내 장소에 더 높은 비중을 둡니다.</div>';return;} const p=chosen[0], cost=Math.min(99,Math.round(100-score(p,sev)+12)); const mode=sev>=.7&&p.reserve?'두리발 대체 경로':'저상버스·도시철도'; $('routePanel').innerHTML=`<div class="route-title"><h3>선택한 여행 코스</h3><span class="route-score">경로 추천 ${100-cost}점</span></div><div class="route"><div class="step"><b>출발 · ${$('origin').value}</b>엘리베이터/저상버스 탑승 가능 여부를 출발 전 확인하세요.</div>${p.route.map((x,i)=>`<div class="step"><b>${i===0?mode:x}</b>${x}</div>`).join('')}<div class="step"><b>도착 · ${p.name}</b>예상 이동 ${Math.round(p.dist*4+10)}분 · 보행 약 ${Math.round(120+p.dist*25)}m</div></div><div class="reservation">${p.reserve?`<b>예약·대체 이동</b><br>비·강풍 시 긴 야외 환승 대신 <a href="https://duribal.co.kr/" target="_blank">두리발 예약/이용 안내 ↗</a>를 이용하세요.`:'<b>예약 필요 없음</b><br>도시철도 및 보행 연결 경로입니다. 시설 운행 상태를 확인하세요.'}</div>`; }
+    // 출발역이 바뀌면 선택 코스의 거리·예상 시간·경로 점수도 즉시 다시 계산합니다.
+    function route(sev, origin){
+      const chosen=places.filter(p=>selected.has(p.name));
+      if(!chosen.length){ return; }
+      const p=chosen[0], d=distanceFor(p,origin), routeScore=Math.max(0,Math.min(100,score(p,sev,d)-12));
+      const panel=$('routePanel');
+      const scoreEl=panel.querySelector('.route-score'); if(scoreEl) scoreEl.textContent=`경로 추천 ${routeScore}점`;
+      const steps=panel.querySelectorAll('.step'); const last=steps[steps.length-1];
+      if(last) last.innerHTML=`<b>도착 · ${p.name}</b>예상 이동 ${Math.round(d*4+10)}분 · 보행 약 ${Math.round(120+d*25)}m`;
+    }
     function toggle(name){ selected.has(name)?selected.delete(name):selected.add(name); render(); } window.toggle=toggle;
     ['weatherSelect','need','origin'].forEach(id=>$(id).addEventListener('change',render)); $('refresh').addEventListener('click',render); render();
   </script>
